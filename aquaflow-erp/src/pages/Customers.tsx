@@ -1,0 +1,335 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { PageHeader } from "@/components/ui/page-header";
+import { DataTable } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/StatusBadge";
+import { FormInput, FormSelect, FormNumber } from "@/components/forms";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Search, Plus, Pencil, Trash2, Users, X, AlertTriangle, MessageCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { useCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, type Customer } from "@/hooks/useCustomers";
+import { useCustomers as useCustomersWebSocket } from "@/hooks/useModuleWebSocket";
+import { createPortal } from "react-dom";
+import { openWhatsApp, getReminderMessage } from "@/utils/whatsapp";
+
+const customerTypes = ["Retail", "Wholesale", "Distributor", "Farm"];
+
+interface CustomerFormData {
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  city: string;
+  state: string;
+  type: string;
+  creditLimit: number;
+  gstNumber: string;
+  notes: string;
+}
+
+export default function Customers() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedType, setSelectedType] = useState("All");
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+
+  const { data: customers = [], isLoading, refetch } = useCustomers({
+    search: searchQuery || undefined,
+    type: selectedType !== "All" ? selectedType : undefined,
+  });
+
+  // WebSocket integration for customer updates
+  useCustomersWebSocket(
+    () => {
+      console.log('👥 Customer list updated via WebSocket (created)');
+      setLastUpdate(new Date());
+      refetch();
+    },
+    () => {
+      console.log('👥 Customer list updated via WebSocket (updated)');
+      setLastUpdate(new Date());
+      refetch();
+    },
+    () => {
+      console.log('👥 Customer list updated via WebSocket (deleted)');
+      setLastUpdate(new Date());
+      refetch();
+    }
+  );
+
+  const createCustomer = useCreateCustomer();
+  const updateCustomer = useUpdateCustomer();
+  const deleteCustomer = useDeleteCustomer();
+
+  const { register: registerAdd, control: controlAdd, handleSubmit: handleAddSubmit, reset: resetAdd, formState: { errors: addErrors } } =
+    useForm<CustomerFormData>({ mode: "onBlur" });
+
+  const { register: registerEdit, control: controlEdit, handleSubmit: handleEditSubmit, reset: resetEdit, formState: { errors: editErrors } } =
+    useForm<CustomerFormData>({ mode: "onBlur" });
+
+  const totalOutstanding = customers.reduce((sum, c) => sum + (c.outstandingBalance || 0), 0);
+  const overdueCount = customers.filter((c) => c.outstandingBalance > c.creditLimit && c.creditLimit > 0).length;
+
+  const onAddSubmit = async (data: CustomerFormData) => {
+    await createCustomer.mutateAsync(data);
+    resetAdd();
+    setIsAddOpen(false);
+  };
+
+  const onEditSubmit = async (data: CustomerFormData) => {
+    if (!selectedCustomer) return;
+    await updateCustomer.mutateAsync({ id: selectedCustomer._id, ...data });
+    resetEdit();
+    setIsEditOpen(false);
+    setSelectedCustomer(null);
+  };
+
+  const handleEdit = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    resetEdit({
+      name: customer.name,
+      phone: customer.phone || "",
+      email: customer.email || "",
+      address: customer.address || "",
+      city: customer.city || "",
+      state: customer.state || "",
+      type: customer.type,
+      creditLimit: customer.creditLimit,
+      gstNumber: customer.gstNumber || "",
+      notes: customer.notes || "",
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedCustomer) return;
+    await deleteCustomer.mutateAsync(selectedCustomer._id);
+    setIsDeleteOpen(false);
+    setSelectedCustomer(null);
+  };
+
+  const CustomerForm = ({ reg, control, submit, errs, isSubmitting, title, onClose }: any) => {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+    if (!mounted) return null;
+    return createPortal(
+      <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
+        <div className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-panel w-full sm:max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display font-bold text-lg text-foreground">{title}</h2>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
+          </div>
+          <form onSubmit={submit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="col-span-1 sm:col-span-2">
+                <FormInput label="Customer Name *" placeholder="Ravi Kumar Fisheries" {...reg("name", { required: "Name is required" })} error={errs.name} />
+              </div>
+              <FormInput label="Phone" placeholder="9876543210" {...reg("phone")} />
+              <FormInput label="Email" type="email" placeholder="customer@email.com" {...reg("email")} />
+              <FormInput label="City" placeholder="Vijayawada" {...reg("city")} />
+              <FormInput label="State" placeholder="Andhra Pradesh" {...reg("state")} />
+              <FormSelect label="Type" options={customerTypes.map((t) => ({ value: t, label: t }))} name="type" control={control} />
+              <FormNumber label="Credit Limit (₹)" prefix="₹" placeholder="50000" {...reg("creditLimit")} />
+              <div className="col-span-1 sm:col-span-2">
+                <FormInput label="GST Number" placeholder="22AAAAA0000A1Z5" {...reg("gstNumber")} />
+              </div>
+              <div className="col-span-1 sm:col-span-2">
+                <FormInput label="Address" placeholder="Full address" {...reg("address")} />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-4">
+              <button type="button" onClick={onClose} className="flex-1 h-10 rounded-lg border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors">Cancel</button>
+              <button type="submit" disabled={isSubmitting} className="flex-1 h-10 rounded-lg bg-brand text-white text-sm font-display font-semibold hover:bg-brand/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+                {isSubmitting ? <><div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /><span>Saving...</span></> : "Save"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>,
+      document.body
+    );
+  };
+
+  return (
+    <AppLayout title="Customers" subtitle="Manage customer accounts and credit">
+      <PageHeader
+        title="Customers"
+        description={`${customers.length} customers · ₹${totalOutstanding.toLocaleString("en-IN")} outstanding${overdueCount > 0 ? ` · ${overdueCount} over limit` : ""}`}
+        actions={
+          <button onClick={() => setIsAddOpen(true)} className="flex items-center gap-2 h-9 px-4 rounded-lg bg-brand text-white text-sm font-display font-semibold hover:bg-brand/90 transition-colors">
+            <Plus className="w-4 h-4" /> Add Customer
+          </button>
+        }
+      />
+
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="flex items-center gap-2 h-9 px-3 rounded-lg border border-border bg-surface flex-1 max-w-sm">
+          <Search className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+          <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1 bg-transparent outline-none placeholder:text-muted-foreground text-foreground text-sm" placeholder="Search customers…" />
+        </div>
+        
+      <Select value={String(selectedType)} onValueChange={(val) => setSelectedType(val)}>
+        <SelectTrigger className="h-9 px-3 rounded-lg border border-border bg-surface text-sm text-foreground outline-none">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          
+          <SelectItem value={"All".toString()}>All Types</SelectItem>
+          {customerTypes.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+        
+        </SelectContent>
+      </Select>
+    
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20"><div className="w-8 h-8 rounded-full border-4 border-brand/20 border-t-brand animate-spin" /></div>
+      ) : customers.length === 0 ? (
+        <EmptyState icon={Users} title="No customers found" description="Add your first customer to start tracking sales." action={{ label: "Add Customer", onClick: () => setIsAddOpen(true) }} />
+      ) : (
+        <DataTable
+          data={customers}
+          mobileCard={(r) => {
+            const isOverLimit = r.creditLimit > 0 && r.outstandingBalance > r.creditLimit;
+            return (
+              <div className="bg-surface rounded-xl border border-border shadow-sm p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-display font-semibold text-sm text-foreground truncate">{r.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{r.phone}{r.city ? ` · ${r.city}` : ""}</p>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-secondary text-foreground shrink-0">{r.type}</span>
+                </div>
+                <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/60">
+                  <div className="flex gap-4 text-xs">
+                    <div>
+                      <p className="text-muted-foreground">Outstanding</p>
+                      <div className="flex items-center gap-1">
+                        <p className={`font-display font-bold ${r.outstandingBalance > 0 ? "text-warning" : "text-success"}`}>₹{r.outstandingBalance.toLocaleString("en-IN")}</p>
+                        {isOverLimit && <AlertTriangle className="w-3 h-3 text-destructive" />}
+                      </div>
+                    </div>
+                    {r.creditLimit > 0 && (
+                      <div>
+                        <p className="text-muted-foreground">Credit Limit</p>
+                        <p className="font-semibold text-foreground">₹{r.creditLimit.toLocaleString("en-IN")}</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {r.phone && r.outstandingBalance > 0 && (
+                      <button onClick={() => openWhatsApp(r.phone!, getReminderMessage(r.name, r.outstandingBalance))} className="w-8 h-8 flex items-center justify-center rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors">
+                        <MessageCircle className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <button onClick={() => handleEdit(r)} className="w-8 h-8 flex items-center justify-center rounded-lg text-brand hover:bg-brand-light transition-colors">
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => { setSelectedCustomer(r); setIsDeleteOpen(true); }} className="w-8 h-8 flex items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 transition-colors">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          }}
+          columns={[
+            {
+              key: "name",
+              header: "Customer",
+              cell: (r) => (
+                <div>
+                  <p className="font-medium text-foreground">{r.name}</p>
+                  <p className="text-xs text-muted-foreground">{r.phone} {r.city ? `· ${r.city}` : ""}</p>
+                </div>
+              ),
+            },
+            { key: "type", header: "Type", cell: (r) => <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-secondary text-foreground">{r.type}</span> },
+            {
+              key: "creditLimit",
+              header: "Credit Limit",
+              cell: (r) => (
+                <span className="text-foreground text-sm">
+                  {r.creditLimit > 0 ? `₹${r.creditLimit.toLocaleString("en-IN")}` : "—"}
+                </span>
+              ),
+            },
+            {
+              key: "outstandingBalance",
+              header: "Outstanding",
+              cell: (r) => {
+                const isOverLimit = r.creditLimit > 0 && r.outstandingBalance > r.creditLimit;
+                return (
+                  <div className="flex items-center gap-2">
+                    <span className={`font-medium ${r.outstandingBalance > 0 ? "text-warning" : "text-success"}`}>
+                      ₹{r.outstandingBalance.toLocaleString("en-IN")}
+                    </span>
+                    {isOverLimit && <AlertTriangle className="w-3.5 h-3.5 text-destructive" />}
+                  </div>
+                );
+              },
+            },
+            {
+              key: "actions",
+              header: "Actions",
+              cell: (r) => (
+                <div className="flex items-center gap-2">
+                  {r.phone && r.outstandingBalance > 0 && (
+                    <button onClick={() => openWhatsApp(r.phone!, getReminderMessage(r.name, r.outstandingBalance))} className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-emerald-600 hover:bg-emerald-50 transition-colors">
+                      <MessageCircle className="w-3.5 h-3.5" /> Reminder
+                    </button>
+                  )}
+                  <button onClick={() => handleEdit(r)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-brand hover:bg-brand-light transition-colors">
+                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  </button>
+                  <button onClick={() => { setSelectedCustomer(r); setIsDeleteOpen(true); }} className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                  </button>
+                </div>
+              ),
+            },
+          ]}
+        />
+      )}
+
+      {isAddOpen && (
+        <CustomerForm
+          reg={registerAdd}
+          control={controlAdd}
+          submit={handleAddSubmit(onAddSubmit)}
+          errs={addErrors}
+          isSubmitting={createCustomer.isPending}
+          title="Add Customer"
+          onClose={() => setIsAddOpen(false)}
+        />
+      )}
+
+      {isEditOpen && selectedCustomer && (
+        <CustomerForm
+          reg={registerEdit}
+          control={controlEdit}
+          submit={handleEditSubmit(onEditSubmit)}
+          errs={editErrors}
+          isSubmitting={updateCustomer.isPending}
+          title="Edit Customer"
+          onClose={() => { setIsEditOpen(false); setSelectedCustomer(null); }}
+        />
+      )}
+
+      <ConfirmDialog
+        isOpen={isDeleteOpen}
+        title="Delete Customer"
+        message={`Delete "${selectedCustomer?.name}"? This cannot be undone.`}
+        confirmText="Delete"
+        isDestructive
+        isLoading={deleteCustomer.isPending}
+        onConfirm={handleDelete}
+        onCancel={() => { setIsDeleteOpen(false); setSelectedCustomer(null); }}
+      />
+    </AppLayout>
+  );
+}
