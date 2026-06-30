@@ -14,6 +14,7 @@ import { useCreateCreditNote } from "@/hooks/useCreditNotes";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useProducts } from "@/hooks/useProducts";
 import { useWarehouses } from "@/hooks/useWarehouses";
+import { useFreezingBatches, type FreezingBatch } from "@/hooks/useFreezingBatches";
 import { useSales as useSalesWebSocket } from "@/hooks/useModuleWebSocket";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -25,7 +26,7 @@ interface CreateInvoiceFormData {
   notes: string;
   paidAmount?: number;
   warehouseId?: string;
-  items: { productId: string; quantity: number; unitPrice: number }[];
+  items: { productId: string; quantity: number; unitPrice: number; freezingBatchId?: string }[];
 }
 
 export default function Sales() {
@@ -70,6 +71,8 @@ export default function Sales() {
   const { data: customers = [] } = useCustomers();
   const { data: products = [] } = useProducts();
   const { data: warehouses = [] } = useWarehouses();
+  const { data: batchesData } = useFreezingBatches({ status: "frozen,packed,partial" });
+  const availableBatches = batchesData?.data || [];
 
   const createInvoice = useCreateInvoice();
   const updateStatus = useUpdateInvoiceStatus();
@@ -83,7 +86,7 @@ export default function Sales() {
         paymentType: "Cash",
         notes: "",
         paidAmount: undefined,
-        items: [{ productId: "", quantity: 1, unitPrice: 0 }],
+        items: [{ productId: "", quantity: 1, unitPrice: 0, freezingBatchId: "" }],
       },
     });
 
@@ -128,6 +131,7 @@ export default function Sales() {
           productId: i.productId,
           quantity: i.quantity,
           unitPrice: i.unitPrice,
+          freezingBatchId: i.freezingBatchId || undefined,
         })),
       });
       reset();
@@ -488,7 +492,7 @@ export default function Sales() {
                   <label className="text-sm font-display font-semibold text-foreground">Products</label>
                   <button
                     type="button"
-                    onClick={() => append({ productId: "", quantity: 1, unitPrice: 0 })}
+                    onClick={() => append({ productId: "", quantity: 1, unitPrice: 0, freezingBatchId: "" })}
                     className="text-xs text-brand font-display font-medium hover:underline"
                   >
                     + Add Item
@@ -496,53 +500,79 @@ export default function Sales() {
                 </div>
 
                 <div className="space-y-3 p-4 bg-secondary rounded-lg">
-                  {fields.map((field, idx) => (
-                    <div key={field.id} className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-end p-2 sm:p-0 rounded-lg sm:rounded-none bg-white sm:bg-transparent border sm:border-0 border-border/50">
-                      <div className="flex-1">
-                        <label className="text-[10px] font-semibold text-muted-foreground uppercase sm:hidden mb-1 block">Product</label>
-                        <select
-                          {...register(`items.${idx}.productId` as const)}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            register(`items.${idx}.productId`).onChange(e);
-                            handleProductChange(idx, val);
-                          }}
-                          className="w-full h-9 px-2 rounded-lg border border-border bg-surface text-sm outline-none focus:ring-2 focus:ring-brand/50"
-                        >
-                          <option value="">Select product…</option>
-                          {products.map((p) => (
-                            <option key={p._id} value={p._id}>
-                              {p.name} — ₹{p.price.toLocaleString("en-IN")} (Stock: {p.stock})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="flex gap-2 items-end">
+                  {fields.map((field, idx) => {
+                    const selectedProductId = watch(`items.${idx}.productId`);
+                    const selectedProduct = products.find((p) => p._id === selectedProductId);
+                    const isPrawnProduct = selectedProduct && (selectedProduct as any).countSize;
+                    const productBatches = isPrawnProduct
+                      ? availableBatches.filter((b) => b.countSize === (selectedProduct as any).countSize && b.remainingKgs > 0)
+                      : [];
+
+                    return (
+                      <div key={field.id} className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-end p-2 sm:p-0 rounded-lg sm:rounded-none bg-white sm:bg-transparent border sm:border-0 border-border/50">
                         <div className="flex-1">
-                          <label className="text-[10px] font-semibold text-muted-foreground uppercase sm:hidden mb-1 block">Qty</label>
-                          <input
-                            type="number"
-                            min="1"
-                            {...register(`items.${idx}.quantity` as const, { valueAsNumber: true })}
-                            className="w-full sm:w-20 h-9 px-2 rounded-lg border border-border bg-surface text-sm outline-none focus:ring-2 focus:ring-brand/50"
-                            placeholder="Qty"
-                          />
+                          <label className="text-[10px] font-semibold text-muted-foreground uppercase sm:hidden mb-1 block">Product</label>
+                          <select
+                            {...register(`items.${idx}.productId` as const)}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              register(`items.${idx}.productId`).onChange(e);
+                              handleProductChange(idx, val);
+                              setValue(`items.${idx}.freezingBatchId`, "");
+                            }}
+                            className="w-full h-9 px-2 rounded-lg border border-border bg-surface text-sm outline-none focus:ring-2 focus:ring-brand/50"
+                          >
+                            <option value="">Select product…</option>
+                            {products.map((p) => (
+                              <option key={p._id} value={p._id}>
+                                {p.name} — ₹{p.price.toLocaleString("en-IN")} (Stock: {p.stock})
+                              </option>
+                            ))}
+                          </select>
                         </div>
-                        <div className="flex-1">
-                          <label className="text-[10px] font-semibold text-muted-foreground uppercase sm:hidden mb-1 block">Unit Price</label>
-                          <input
-                            type="number"
-                            {...register(`items.${idx}.unitPrice` as const, { valueAsNumber: true })}
-                            className="w-full sm:w-28 h-9 px-2 rounded-lg border border-border bg-surface text-sm outline-none focus:ring-2 focus:ring-brand/50"
-                            placeholder="Price"
-                          />
+                        {isPrawnProduct && (
+                          <div className="flex-1">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase sm:hidden mb-1 block">Freezing Batch</label>
+                            <select
+                              {...register(`items.${idx}.freezingBatchId` as const)}
+                              className="w-full h-9 px-2 rounded-lg border border-border bg-surface text-sm outline-none focus:ring-2 focus:ring-brand/50"
+                            >
+                              <option value="">Select batch…</option>
+                              {productBatches.map((b) => (
+                                <option key={b._id} value={b._id}>
+                                  {b.batchNumber} — {b.remainingKgs} kg
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        <div className="flex gap-2 items-end">
+                          <div className="flex-1">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase sm:hidden mb-1 block">Qty</label>
+                            <input
+                              type="number"
+                              min="1"
+                              {...register(`items.${idx}.quantity` as const, { valueAsNumber: true })}
+                              className="w-full sm:w-20 h-9 px-2 rounded-lg border border-border bg-surface text-sm outline-none focus:ring-2 focus:ring-brand/50"
+                              placeholder="Qty"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-[10px] font-semibold text-muted-foreground uppercase sm:hidden mb-1 block">Unit Price</label>
+                            <input
+                              type="number"
+                              {...register(`items.${idx}.unitPrice` as const, { valueAsNumber: true })}
+                              className="w-full sm:w-28 h-9 px-2 rounded-lg border border-border bg-surface text-sm outline-none focus:ring-2 focus:ring-brand/50"
+                              placeholder="Price"
+                            />
+                          </div>
+                          <button type="button" onClick={() => remove(idx)} className="h-9 px-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors shrink-0">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
-                        <button type="button" onClick={() => remove(idx)} className="h-9 px-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors shrink-0">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -622,7 +652,14 @@ export default function Sales() {
               {selectedInvoice.items.map((item, i) => (
                 <div key={i} className="p-3.5 rounded-xl bg-secondary/50 border border-border/80">
                   <div className="flex justify-between items-start gap-2">
-                    <p className="font-display font-semibold text-sm text-foreground">{item.productName}</p>
+                    <div>
+                      <p className="font-display font-semibold text-sm text-foreground">{item.productName}</p>
+                      {item.batchNumber && (
+                        <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-600 font-semibold border border-blue-100">
+                          Batch: {item.batchNumber}
+                        </span>
+                      )}
+                    </div>
                     <p className="font-display font-bold text-sm text-brand">₹{(item.lineTotal || 0).toLocaleString("en-IN")}</p>
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground mt-2 pt-2 border-t border-border/45">
@@ -647,7 +684,14 @@ export default function Sales() {
                 <tbody>
                   {selectedInvoice.items.map((item, i) => (
                     <tr key={i} className="border-b border-border last:border-0 hover:bg-background/40 transition-colors">
-                      <td className="px-4 py-3 font-medium text-foreground">{item.productName}</td>
+                      <td className="px-4 py-3 font-medium text-foreground">
+                        {item.productName}
+                        {item.batchNumber && (
+                          <span className="ml-2 inline-block px-1.5 py-0.5 rounded text-[10px] bg-blue-50 text-blue-600 font-semibold border border-blue-100">
+                            Batch: {item.batchNumber}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-right text-foreground">{item.quantity}</td>
                       <td className="px-4 py-3 text-right text-foreground">₹{(item.unitPrice || 0).toLocaleString("en-IN")}</td>
                       <td className="px-4 py-3 text-right font-semibold text-foreground">₹{(item.lineTotal || 0).toLocaleString("en-IN")}</td>

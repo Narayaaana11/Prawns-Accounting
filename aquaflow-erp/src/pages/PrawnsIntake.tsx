@@ -2,7 +2,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { ProductCatalogBrowser } from "@/components/ProductCatalogBrowser";
 import { FormInput, FormSelect, FormNumber } from "@/components/forms";
 import {
   Search, Plus, Pencil, Trash2, X, Package,
@@ -28,36 +27,30 @@ import { cn } from "@/lib/utils";
 const PAGE_SIZE = 10;
 
 const brands = [
-  "Avanti Feeds", "CP Aquaculture", "Cargill", "Growel Feeds",
-  "ABIS (IB Group)", "Godrej Agrovet", "Waterbase", "Organica Biotech",
-  "Aqua Vet", "AquaShield", "INVE Aquaculture", "Nutreco", "Nutrimix",
-  "Agri Chemicals", "Other"
+  "Local Supplier", "Coastal Prawns", "Marine Fresh", "Aqua Farms",
+  "Bay Seafood", "Ocean Harvest", "Fresh Catch", "Premium Prawns",
+  "Other"
 ];
 
 const categories = [
-  "Floating Fish Feed", "Sinking Fish Feed", "Shrimp Feed (Vannamei)",
-  "Scampi Feed", "Starter Pellets", "Grower Pellets", "Finisher Pellets",
-  "Probiotics & Supplements", "Minerals & Chemicals", "Medicines & Veterinary", "Other"
+  "Vannamei Prawns", "Scampi Prawns", "Tiger Prawns", "White Prawns",
+  "Other"
 ];
 
 interface ProductFormData {
   name: string; brand: string; category: string;
-  pelletSize: string; weight: number; price: number;
+  pelletSize: string; countSize: string; intakeDate: string;
+  weight: number; price: number;
   purchasePrice: number; stock: number; lowStockThreshold: number;
   description: string; imageUrl: string;
 }
 
 const categoryColors: Record<string, string> = {
-  "Shrimp Feed (Vannamei)": "bg-sky-100 text-sky-700",
-  "Floating Fish Feed": "bg-emerald-100 text-emerald-700",
-  "Sinking Fish Feed": "bg-blue-100 text-blue-700",
-  "Scampi Feed": "bg-violet-100 text-violet-700",
-  "Starter Pellets": "bg-amber-100 text-amber-700",
-  "Grower Pellets": "bg-lime-100 text-lime-700",
-  "Finisher Pellets": "bg-orange-100 text-orange-700",
-  "Probiotics & Supplements": "bg-pink-100 text-pink-700",
-  "Minerals & Chemicals": "bg-slate-100 text-slate-700",
-  "Medicines & Veterinary": "bg-red-100 text-red-700",
+  "Vannamei Prawns": "bg-sky-100 text-sky-700",
+  "Scampi Prawns": "bg-violet-100 text-violet-700",
+  "Tiger Prawns": "bg-orange-100 text-orange-700",
+  "White Prawns": "bg-emerald-100 text-emerald-700",
+  "Other": "bg-gray-100 text-gray-700",
 };
 
 function getCatClass(cat: string) {
@@ -212,7 +205,9 @@ export default function Products() {
     setSelectedProduct(product);
     resetEdit({
       name: product.name, brand: product.brand, category: product.category,
-      pelletSize: product.pelletSize || "", weight: product.weight,
+      pelletSize: product.pelletSize || "", countSize: (product as any).countSize || "",
+      intakeDate: (product as any).intakeDate ? new Date((product as any).intakeDate).toISOString().split('T')[0] : "",
+      weight: product.weight,
       price: product.price, purchasePrice: product.purchasePrice || 0,
       stock: product.stock, lowStockThreshold: product.lowStockThreshold,
       description: product.description || "", imageUrl: product.imageUrl || "",
@@ -249,19 +244,19 @@ export default function Products() {
   const handleStockChange = (v: string) => { setSelectedStockFilter(v); setPage(1); };
 
   return (
-    <AppLayout title="Products" subtitle="Manage your product catalogue">
+    <AppLayout title="Prawns Intake" subtitle="Manage your prawns intake records">
       <PageHeader
-        title="Product Catalogue"
-        description={`${allProducts.length} products · ${lowStockCount} low stock`}
+        title="Prawns Intake"
+        description="Add, edit, and manage your daily prawns intake records"
         actions={
           <div className="flex items-center gap-2">
-            <button
+            {/* <button
               onClick={() => setIsCatalogOpen(true)}
               className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-border bg-surface text-sm font-display font-semibold text-foreground hover:bg-secondary transition-colors"
             >
               <BookOpen className="w-4 h-4 text-brand" />
               <span className="hidden sm:inline">Browse Catalog</span>
-            </button>
+            </button> */}
             <button
               onClick={() => { resetAdd(); setIsAddOpen(true); }}
               className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-brand text-white text-sm font-display font-semibold hover:bg-brand/90 transition-colors"
@@ -275,7 +270,7 @@ export default function Products() {
 
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
-        <div className="flex items-center gap-2 h-10 px-3 rounded-xl border border-border bg-surface flex-1 max-w-md">
+        {/* <div className="flex items-center gap-2 h-10 px-3 rounded-xl border border-border bg-surface flex-1 max-w-md">
           <Search className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
           <input
             value={searchQuery}
@@ -288,10 +283,10 @@ export default function Products() {
               <X className="w-3.5 h-3.5 text-muted-foreground" />
             </button>
           )}
-        </div>
+        </div> */}
         <div className="flex gap-2">
           
-      <Select value={String(selectedBrand)} onValueChange={(val) => handleBrandChange(val)}>
+      {/* <Select value={String(selectedBrand)} onValueChange={(val) => handleBrandChange(val)}>
         <SelectTrigger className="flex-1 sm:flex-none h-10 px-3 rounded-xl border border-border bg-surface text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/50">
           <SelectValue />
         </SelectTrigger>
@@ -301,10 +296,10 @@ export default function Products() {
             {brands.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
           
         </SelectContent>
-      </Select>
+      </Select> */}
     
           
-      <Select value={String(selectedStockFilter)} onValueChange={(val) => handleStockChange(val)}>
+      {/* <Select value={String(selectedStockFilter)} onValueChange={(val) => handleStockChange(val)}>
         <SelectTrigger className="flex-1 sm:flex-none h-10 px-3 rounded-xl border border-border bg-surface text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/50">
           <SelectValue />
         </SelectTrigger>
@@ -315,7 +310,7 @@ export default function Products() {
             <SelectItem value={"In Stock".toString()}>In Stock</SelectItem>
           
         </SelectContent>
-      </Select>
+      </Select> */}
     
         </div>
       </div>
@@ -330,17 +325,17 @@ export default function Products() {
           <div className="w-16 h-16 rounded-2xl bg-brand-light flex items-center justify-center mb-4">
             <Package className="w-8 h-8 text-brand" />
           </div>
-          <h3 className="font-display font-bold text-foreground text-base mb-1">No products yet</h3>
+          {/* <h3 className="font-display font-bold text-foreground text-base mb-1">No products yet</h3>
           <p className="text-sm text-muted-foreground max-w-xs mb-5">
             Start by browsing the AP Aquaculture catalog or add a product manually.
-          </p>
+          </p> */}
           <div className="flex gap-3">
-            <button
+            {/* <button
               onClick={() => setIsCatalogOpen(true)}
               className="flex items-center gap-2 h-9 px-4 rounded-lg border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors"
             >
               <BookOpen className="w-4 h-4 text-brand" /> Browse Catalog
-            </button>
+            </button> */}
             <button
               onClick={() => { resetAdd(); setIsAddOpen(true); }}
               className="flex items-center gap-2 h-9 px-4 rounded-lg bg-brand text-white text-sm font-display font-semibold hover:bg-brand/90 transition-colors"
@@ -596,6 +591,18 @@ export default function Products() {
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
+                <FormSelect
+                  label="Count Size"
+                  options={["40 count", "60 count", "80 count", "100 count", "120 count", "Other"].map((c) => ({ value: c, label: c }))}
+                  name="countSize" control={controlAdd}
+                />
+                <FormInput
+                  type="date"
+                  label="Intake Date"
+                  {...registerAdd("intakeDate")}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <FormInput label="Pellet Size" placeholder="2mm" {...registerAdd("pelletSize")} />
                 <FormNumber
                   label="Weight (kg)"
@@ -677,6 +684,18 @@ export default function Products() {
               <div className="grid grid-cols-2 gap-3">
                 <FormSelect label="Brand" options={brands.map((b) => ({ value: b, label: b }))} name="brand" control={controlEdit} required error={editErrors.brand} />
                 <FormSelect label="Category" options={categories.map((c) => ({ value: c, label: c }))} name="category" control={controlEdit} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <FormSelect
+                  label="Count Size"
+                  options={["40 count", "60 count", "80 count", "100 count", "120 count", "Other"].map((c) => ({ value: c, label: c }))}
+                  name="countSize" control={controlEdit}
+                />
+                <FormInput
+                  type="date"
+                  label="Intake Date"
+                  {...registerEdit("intakeDate")}
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <FormInput label="Pellet Size" {...registerEdit("pelletSize")} />

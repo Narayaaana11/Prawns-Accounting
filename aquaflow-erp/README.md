@@ -1,6 +1,6 @@
-# AquaFeed ERP — Frontend
+# Prawns Accounting — Frontend
 
-React + TypeScript + Vite frontend for the AquaFeed ERP system.
+React + TypeScript + Vite frontend for the Prawns Accounting system.
 
 ## Tech Stack
 

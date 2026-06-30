@@ -13,13 +13,15 @@ import {
   Truck,
   ShoppingBag,
   RotateCcw,
+  Snowflake,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLogo } from "@/components/AppLogo";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/products", label: "Products", icon: Package },
+  { to: "/prawns-intake", label: "Prawns Intake", icon: Package },
+  { to: "/freezing-batches", label: "Freezing Batches", icon: Snowflake },
   { to: "/inventory", label: "Inventory", icon: Layers },
   { to: "/sales", label: "Sales", icon: ShoppingCart },
   { to: "/customers", label: "Customers", icon: Users },
@@ -51,7 +53,7 @@ export function Sidebar() {
       <NavLink to="/" className="flex items-center gap-3 px-5 h-16 border-b border-sidebar-border shrink-0 hover:bg-sidebar-accent/20 transition-colors">
         <AppLogo size="sm" />
         <span className="font-display font-800 text-base text-black tracking-tight">
-          <b>AquaFeed ERP</b>
+          <b>Prawns Accounting</b>
         </span>
       </NavLink>
 

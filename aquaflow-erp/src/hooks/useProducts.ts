@@ -8,6 +8,8 @@ export interface Product {
   brand: string;
   category: string;
   pelletSize?: string;
+  countSize?: string;
+  intakeDate?: string;
   weight: number;
   price: number;
   purchasePrice?: number;

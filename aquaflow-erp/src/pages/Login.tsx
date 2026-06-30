@@ -38,7 +38,7 @@ export default function Login() {
           <div className="bg-white rounded-xl px-3 py-2">
             <AppLogo size="md" />
           </div>
-          <span className="font-display font-bold text-xl text-white">AquaFeed ERP</span>
+          <span className="font-display font-bold text-xl text-white">Prawns Accounting</span>
         </div>
         <div>
           <h2 className="font-display text-4xl font-bold text-white leading-tight">
@@ -46,7 +46,7 @@ export default function Login() {
           </h2>
           <p className="mt-4 text-white/70 text-lg">Inventory · Sales · Billing · Reports · Multi-warehouse</p>
         </div>
-        <p className="text-white/50 text-sm">© 2026 AquaFeed ERP. All rights reserved.</p>
+        <p className="text-white/50 text-sm">© 2026 Prawns Accounting. All rights reserved.</p>
       </div>
 
       {/* Right form panel */}
@@ -54,7 +54,7 @@ export default function Login() {
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-2 mb-8">
             <AppLogo size="sm" />
-            <span className="font-display font-bold text-lg text-foreground">AquaFeed ERP</span>
+            <span className="font-display font-bold text-lg text-foreground">Prawns Accounting</span>
           </div>
 
           <h1 className="font-display text-2xl font-bold text-foreground">Welcome back</h1>
@@ -89,11 +89,10 @@ export default function Login() {
                 type="password"
                 placeholder="••••••••"
                 {...register("password", validationRules.password)}
-                className={`w-full h-10 px-3 rounded-lg border transition-colors text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-offset-0 bg-surface ${
-                  errors.password
+                className={`w-full h-10 px-3 rounded-lg border transition-colors text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-offset-0 bg-surface ${errors.password
                     ? "border-destructive focus:ring-destructive/50"
                     : "border-border focus:ring-brand/50"
-                }`}
+                  }`}
               />
               {errors.password && (
                 <p className="text-xs text-destructive mt-1.5">{errors.password.message}</p>

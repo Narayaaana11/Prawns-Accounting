@@ -24,6 +24,7 @@ import {
   useCustomerOutstanding,
   exportCSV,
 } from "@/hooks/useReports";
+import { useFreezingBatches } from "@/hooks/useFreezingBatches";
 
 const COLORS = ["#14b8a6", "#0d9488", "#0f766e", "#115e59", "#134e4a"];
 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -36,6 +37,41 @@ export default function Reports() {
   const { data: topProductsData, isLoading: isTopProductsLoading } = useTopProducts(5);
   const { data: expenseData, isLoading: isExpenseLoading } = useExpenseBreakdown();
   const { data: creditDataRaw, isLoading: isCreditLoading } = useCustomerOutstanding();
+  const { data: batchesData, isLoading: isBatchesLoading } = useFreezingBatches({ status: "All" });
+  const batches = batchesData?.data || [];
+
+  // Prawns Batches calculations
+  const activeBatches = batches.filter((b) => b.status !== "exhausted");
+  const totalActiveBatchesCount = activeBatches.length;
+  const totalPrawnsWeightKgs = activeBatches.reduce((sum, b) => sum + (b.remainingKgs || 0), 0);
+
+  // Count Size distribution for prawns
+  const countSizeMap = activeBatches.reduce((acc: Record<string, number>, b) => {
+    const cs = b.countSize || "Other";
+    acc[cs] = (acc[cs] || 0) + (b.remainingKgs || 0);
+    return acc;
+  }, {});
+
+  const totalRemainingWeight = Object.values(countSizeMap).reduce((sum, w) => sum + w, 0);
+
+  const prawnCountSizeData = Object.keys(countSizeMap).map((key) => ({
+    name: key,
+    amount: countSizeMap[key],
+    value: totalRemainingWeight > 0 ? Math.round((countSizeMap[key] / totalRemainingWeight) * 100) : 0,
+  })).sort((a, b) => b.amount - a.amount);
+
+  // Warehouse Prawn Allocation
+  const warehousePrawnMap = activeBatches.reduce((acc: Record<string, { name: string; weight: number }>, b) => {
+    const whId = b.warehouse?._id;
+    const whName = b.warehouse?.name || "Unknown Warehouse";
+    if (whId) {
+      if (!acc[whId]) acc[whId] = { name: whName, weight: 0 };
+      acc[whId].weight += (b.remainingKgs || 0);
+    }
+    return acc;
+  }, {});
+
+  const warehousePrawnData = Object.values(warehousePrawnMap).sort((a, b) => b.weight - a.weight);
 
   // Format sales trend for charts
   const monthlySalesData = (trendData || []).map((item: any) => {
@@ -429,6 +465,138 @@ export default function Reports() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Prawn Stock & Freezing Batch Analytics */}
+      <div className="mt-6">
+        <h3 className="font-display font-bold text-foreground text-lg mb-4">Prawn Stock & Batch Analytics</h3>
+        
+        {/* Metric Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div className="bg-surface rounded-xl border border-border shadow-card p-4 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+              <span className="text-blue-600 font-bold text-lg">❄️</span>
+            </div>
+            <div>
+              <p className="text-xs font-display font-semibold uppercase tracking-wide text-muted-foreground">Active Freezing Batches</p>
+              <p className="font-display font-bold text-foreground text-xl mt-0.5">{isBatchesLoading ? "..." : totalActiveBatchesCount}</p>
+            </div>
+          </div>
+          <div className="bg-surface rounded-xl border border-border shadow-card p-4 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+              <span className="text-emerald-600 font-bold text-lg">⚖️</span>
+            </div>
+            <div>
+              <p className="text-xs font-display font-semibold uppercase tracking-wide text-muted-foreground">Total Prawn Stock (Weight)</p>
+              <p className="font-display font-bold text-foreground text-xl mt-0.5">{isBatchesLoading ? "..." : `${totalPrawnsWeightKgs.toLocaleString("en-IN")} kg`}</p>
+            </div>
+          </div>
+          <div className="bg-surface rounded-xl border border-border shadow-card p-4 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center shrink-0">
+              <span className="text-teal-600 font-bold text-lg">📦</span>
+            </div>
+            <div>
+              <p className="text-xs font-display font-semibold uppercase tracking-wide text-muted-foreground">Avg Batch Size</p>
+              <p className="font-display font-bold text-foreground text-xl mt-0.5">
+                {isBatchesLoading ? "..." : `${totalActiveBatchesCount > 0 ? Math.round(totalPrawnsWeightKgs / totalActiveBatchesCount).toLocaleString("en-IN") : 0} kg`}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Count Size Distribution */}
+          <div className="bg-surface rounded-xl border border-border shadow-card p-5">
+            <p className="font-display font-semibold text-foreground mb-4">Stock Distribution by Count Size</p>
+            {isBatchesLoading ? (
+              <div className="h-[200px] flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full border-4 border-brand/20 border-t-brand animate-spin" />
+              </div>
+            ) : prawnCountSizeData.length === 0 ? (
+              <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">
+                No active freezing batches found.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie
+                      data={prawnCountSizeData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={30}
+                      outerRadius={55}
+                      paddingAngle={2}
+                      dataKey="amount"
+                    >
+                      {prawnCountSizeData.map((_, i) => (
+                        <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        border: "1px solid hsl(214 32% 91%)",
+                        borderRadius: 8,
+                        fontSize: 12,
+                        background: "#fff",
+                      }}
+                      formatter={(v) => [`${v.toLocaleString("en-IN")} kg`]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <ul className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                  {prawnCountSizeData.map((item, i) => (
+                    <li key={item.name} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-2.5 h-2.5 rounded-sm shrink-0"
+                          style={{ background: COLORS[i % COLORS.length] }}
+                        />
+                        <span className="text-foreground font-medium">{item.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground font-semibold">{item.value}%</span>
+                        <span className="text-muted-foreground/60 text-[10px]">({item.amount.toLocaleString("en-IN")} kg)</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {/* Warehouse Allocation */}
+          <div className="bg-surface rounded-xl border border-border shadow-card p-5">
+            <p className="font-display font-semibold text-foreground mb-4">Stock Allocation by Warehouse</p>
+            {isBatchesLoading ? (
+              <div className="h-[200px] flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full border-4 border-brand/20 border-t-brand animate-spin" />
+              </div>
+            ) : warehousePrawnData.length === 0 ? (
+              <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">
+                No prawns stock allocated to warehouses.
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-[220px] overflow-y-auto pr-1">
+                {warehousePrawnData.map((wh) => (
+                  <div key={wh.name} className="space-y-1">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-medium text-foreground">{wh.name}</span>
+                      <span className="font-bold text-brand">{wh.weight.toLocaleString("en-IN")} kg</span>
+                    </div>
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-2 bg-brand rounded-full transition-all"
+                        style={{ width: `${Math.min(100, (wh.weight / Math.max(1, totalPrawnsWeightKgs)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </AppLayout>
   );

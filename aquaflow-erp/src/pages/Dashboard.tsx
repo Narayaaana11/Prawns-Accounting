@@ -141,14 +141,14 @@ export default function Dashboard() {
       )}
 
       {/* Welcome & Demo Seeding Banner */}
-      {isEmptyWorkspace && (
+      {/* {isEmptyWorkspace && (
         <div className="bg-brand/10 border border-brand/20 rounded-xl p-5 mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex gap-3">
             <div className="rounded-lg bg-white px-2 py-1.5 shrink-0 border border-brand/10">
               <AppLogo size="xs" />
             </div>
             <div>
-              <h3 className="font-display font-bold text-foreground text-sm">Welcome to AquaFeed ERP!</h3>
+              <h3 className="font-display font-bold text-foreground text-sm">Welcome to Prawns Accounting!</h3>
               <p className="text-xs text-muted-foreground mt-0.5 max-w-xl">
                 Get started by adding products and customers, or populate your workspace with sample demo data (invoices, expenses, stock records) to see how the reports and analytics look in production.
               </p>
@@ -169,27 +169,27 @@ export default function Dashboard() {
             )}
           </button>
         </div>
-      )}
+      )} */}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="flex items-center gap-2 h-9 px-3 rounded-lg border border-border bg-surface text-sm text-foreground">
           <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
-          
-      <Select value={String(dateRange)} onValueChange={(val) => setDateRange(val)}>
-        <SelectTrigger className="flex-1 bg-transparent outline-none text-sm">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          
-            <SelectItem value={"week".toString()}>This Week</SelectItem>
-            <SelectItem value={"month".toString()}>This Month</SelectItem>
-            <SelectItem value={"quarter".toString()}>This Quarter</SelectItem>
-            <SelectItem value={"year".toString()}>This Year</SelectItem>
-          
-        </SelectContent>
-      </Select>
-    
+
+          <Select value={String(dateRange)} onValueChange={(val) => setDateRange(val)}>
+            <SelectTrigger className="flex-1 bg-transparent outline-none text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+
+              <SelectItem value={"week".toString()}>This Week</SelectItem>
+              <SelectItem value={"month".toString()}>This Month</SelectItem>
+              <SelectItem value={"quarter".toString()}>This Quarter</SelectItem>
+              <SelectItem value={"year".toString()}>This Year</SelectItem>
+
+            </SelectContent>
+          </Select>
+
         </div>
         <button
           onClick={() => refetch()}
@@ -210,16 +210,16 @@ export default function Dashboard() {
           icon={ShoppingCart}
         />
         <StatCard
-          title="Total Products"
+          title="Total Production"
           value={dashLoading ? "..." : String(kpis?.products?.value || 0)}
-          change="Active products"
+          change="Kilograms produced"
           changeType="neutral"
           icon={Package}
         />
         <StatCard
-          title="Low Stock Items"
+          title="Meat Purchased"
           value={dashLoading ? "..." : String(kpis?.lowStock?.value || 0)}
-          change="Requires reorder"
+          change="Kilograms"
           changeType={kpis?.lowStock?.value > 0 ? "negative" : "positive"}
           icon={AlertTriangle}
           iconColor="bg-warning/10 text-warning"
@@ -227,7 +227,7 @@ export default function Dashboard() {
         <StatCard
           title="Total Customers"
           value={dashLoading ? "..." : String(kpis?.customers?.value || 0)}
-          change={`${kpis?.overdue?.value || 0} overdue`}
+          // change={`${kpis?.overdue?.value || 0} overdue`}
           changeType={kpis?.overdue?.value > 0 ? "negative" : "positive"}
           icon={Users}
         />
@@ -236,7 +236,7 @@ export default function Dashboard() {
       {/* Charts grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 md:gap-4 mb-4">
         {/* Sales trend */}
-        <div className="xl:col-span-2 bg-surface rounded-xl border border-border shadow-card p-4 md:p-5">
+        <div className="xl:col-span-3 bg-surface rounded-xl border border-border shadow-card p-4 md:p-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
             <div>
               <p className="text-xs font-display font-semibold uppercase tracking-wide text-muted-foreground">Sales Trend</p>
@@ -268,7 +268,7 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Inventory breakdown */}
+        {/* Inventory breakdown
         <div className="bg-surface rounded-xl border border-border shadow-card p-4 md:p-5">
           <p className="text-xs font-display font-semibold uppercase tracking-wide text-muted-foreground">Inventory Value</p>
           <p className="font-display text-xl font-bold text-foreground mt-0.5 mb-4">By Category</p>
@@ -296,12 +296,12 @@ export default function Dashboard() {
               </li>
             ))}
           </ul>
-        </div>
+        </div> */}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 md:gap-4">
         {/* Top Products */}
-        <div className="bg-surface rounded-xl border border-border shadow-card p-4 md:p-5">
+        {/* <div className="bg-surface rounded-xl border border-border shadow-card p-4 md:p-5">
           <p className="text-xs font-display font-semibold uppercase tracking-wide text-muted-foreground mb-4">
             Top Selling Products
           </p>
@@ -314,10 +314,10 @@ export default function Dashboard() {
               <Bar dataKey="qty" fill="#14b8a6" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
+        </div> */}
 
         {/* Recent Sales */}
-        <div className="xl:col-span-2 bg-surface rounded-xl border border-border shadow-card p-4 md:p-5">
+        {/* <div className="xl:col-span-2 bg-surface rounded-xl border border-border shadow-card p-4 md:p-5">
           <div className="flex items-center justify-between mb-4">
             <p className="text-xs font-display font-semibold uppercase tracking-wide text-muted-foreground">Recent Sales</p>
           </div>
@@ -346,7 +346,7 @@ export default function Dashboard() {
               ))
             )}
           </div>
-        </div>
+        </div> */}
       </div>
     </AppLayout>
   );

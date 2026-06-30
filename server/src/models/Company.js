@@ -62,6 +62,14 @@ const companySchema = new mongoose.Schema(
       type: Number,
       default: 1,
     },
+    batchPrefix: {
+      type: String,
+      default: 'FB',
+    },
+    batchCounter: {
+      type: Number,
+      default: 1,
+    },
     financialYearStart: {
       type: String,
       default: 'April',

@@ -92,7 +92,7 @@ export default function Register() {
       <div className="w-full max-w-lg">
         <div className="flex items-center gap-2 mb-8">
           <AppLogo size="sm" />
-          <span className="font-display font-bold text-lg text-foreground">AquaFeed ERP</span>
+          <span className="font-display font-bold text-lg text-foreground">Prawns Accounting</span>
         </div>
 
         <div className="bg-surface rounded-2xl border border-border shadow-panel p-8">

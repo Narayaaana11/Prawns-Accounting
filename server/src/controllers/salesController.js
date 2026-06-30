@@ -6,6 +6,7 @@ const Company = require('../models/Company');
 const StockAdjustment = require('../models/StockAdjustment');
 const Warehouse = require('../models/Warehouse');
 const Inventory = require('../models/Inventory');
+const FreezingBatch = require('../models/FreezingBatch');
 const { emitInvoiceCreated, emitInvoiceUpdated, emitInvoiceDeleted, emitInvoicePaid, emitDashboardUpdate, emitLowStockAlert } = require('../utils/websocket');
 
 // Generate next invoice number
@@ -57,7 +58,8 @@ const getInvoice = async (req, res, next) => {
   try {
     const invoice = await Invoice.findOne({ _id: req.params.id, company: req.companyId })
       .populate('customer')
-      .populate('items.product', 'name brand')
+      .populate('items.product', 'name brand countSize')
+      .populate('items.freezingBatch', 'batchNumber countSize remainingKgs')
       .populate('createdBy', 'name');
     if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found.' });
     res.json({ success: true, data: invoice });
@@ -132,6 +134,27 @@ const createInvoice = async (req, res, next) => {
         });
       }
 
+      // Validate freezing batch if provided (for prawn products)
+      let freezingBatch = null;
+      let batchNumber = null;
+      if (item.freezingBatchId) {
+        freezingBatch = await FreezingBatch.findOne({ 
+          _id: item.freezingBatchId, 
+          company: req.companyId,
+          remainingKgs: { $gte: item.quantity }
+        }).session(session);
+        
+        if (!freezingBatch) {
+          await session.abortTransaction();
+          session.endSession();
+          return res.status(400).json({
+            success: false,
+            message: `Insufficient stock in freezing batch or batch not found for "${product.name}".`,
+          });
+        }
+        batchNumber = freezingBatch.batchNumber;
+      }
+
       const lineTotal = item.quantity * (item.unitPrice || product.price);
       subtotal += lineTotal;
       lineItems.push({
@@ -141,6 +164,9 @@ const createInvoice = async (req, res, next) => {
         unitPrice: item.unitPrice || product.price,
         discount: item.discount || 0,
         lineTotal,
+        freezingBatch: freezingBatch ? freezingBatch._id : null,
+        countSize: product.countSize || null,
+        batchNumber,
       });
     }
 
@@ -217,6 +243,21 @@ const createInvoice = async (req, res, next) => {
       // Deduct from global stock
       product.stock -= item.quantity;
       await product.save({ session });
+
+      // Deduct from freezing batch if applicable
+      if (item.freezingBatchId) {
+        const batch = await FreezingBatch.findById(item.freezingBatchId).session(session);
+        if (batch) {
+          batch.remainingKgs -= item.quantity;
+          if (batch.remainingKgs <= 0) {
+            batch.remainingKgs = 0;
+            batch.status = 'exhausted';
+          } else if (batch.status === 'frozen' || batch.status === 'packed') {
+            batch.status = 'partial';
+          }
+          await batch.save({ session });
+        }
+      }
 
       await StockAdjustment.create([{
         product: product._id,
@@ -406,6 +447,18 @@ const updateInvoice = async (req, res, next) => {
         invRecord.quantity += oldItem.quantity;
         await invRecord.save({ session });
       }
+
+      // Restore freezing batch stock if applicable
+      if (oldItem.freezingBatch) {
+        const batch = await FreezingBatch.findById(oldItem.freezingBatch).session(session);
+        if (batch) {
+          batch.remainingKgs += oldItem.quantity;
+          if (batch.status === 'exhausted' || batch.status === 'partial') {
+            batch.status = batch.remainingKgs >= batch.quantityKgs ? 'packed' : 'partial';
+          }
+          await batch.save({ session });
+        }
+      }
     }
 
     // 2. Validate and build new line items
@@ -438,6 +491,27 @@ const updateInvoice = async (req, res, next) => {
         });
       }
 
+      // Validate freezing batch if provided
+      let freezingBatch = null;
+      let batchNumber = null;
+      if (item.freezingBatchId) {
+        freezingBatch = await FreezingBatch.findOne({ 
+          _id: item.freezingBatchId, 
+          company: req.companyId,
+          remainingKgs: { $gte: item.quantity }
+        }).session(session);
+        
+        if (!freezingBatch) {
+          await session.abortTransaction();
+          session.endSession();
+          return res.status(400).json({
+            success: false,
+            message: `Insufficient stock in freezing batch or batch not found for "${product.name}".`,
+          });
+        }
+        batchNumber = freezingBatch.batchNumber;
+      }
+
       const lineTotal = item.quantity * (item.unitPrice || product.price);
       subtotal += lineTotal;
       lineItems.push({
@@ -447,6 +521,9 @@ const updateInvoice = async (req, res, next) => {
         unitPrice: item.unitPrice || product.price,
         discount: item.discount || 0,
         lineTotal,
+        freezingBatch: freezingBatch ? freezingBatch._id : null,
+        countSize: product.countSize || null,
+        batchNumber,
       });
     }
 
@@ -466,6 +543,21 @@ const updateInvoice = async (req, res, next) => {
       await invRecord.save({ session });
       product.stock -= item.quantity;
       await product.save({ session });
+
+      // Deduct from freezing batch if applicable
+      if (item.freezingBatchId) {
+        const batch = await FreezingBatch.findById(item.freezingBatchId).session(session);
+        if (batch) {
+          batch.remainingKgs -= item.quantity;
+          if (batch.remainingKgs <= 0) {
+            batch.remainingKgs = 0;
+            batch.status = 'exhausted';
+          } else if (batch.status === 'frozen' || batch.status === 'packed') {
+            batch.status = 'partial';
+          }
+          await batch.save({ session });
+        }
+      }
 
       await StockAdjustment.create([{
         product: product._id,

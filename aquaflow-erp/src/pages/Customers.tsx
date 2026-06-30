@@ -11,7 +11,6 @@ import { useForm } from "react-hook-form";
 import { useCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, type Customer } from "@/hooks/useCustomers";
 import { useCustomers as useCustomersWebSocket } from "@/hooks/useModuleWebSocket";
 import { createPortal } from "react-dom";
-import { openWhatsApp, getReminderMessage } from "@/utils/whatsapp";
 
 const customerTypes = ["Retail", "Wholesale", "Distributor", "Farm"];
 

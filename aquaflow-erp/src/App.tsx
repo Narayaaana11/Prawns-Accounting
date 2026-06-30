@@ -8,7 +8,8 @@ import { useState, useEffect } from "react";
 import Login from "./pages/Login.tsx";
 import Register from "./pages/Register.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
-import Products from "./pages/Products.tsx";
+import PrawnsIntake from "./pages/PrawnsIntake.tsx";
+import FreezingBatches from "./pages/FreezingBatches.tsx";
 import Inventory from "./pages/Inventory.tsx";
 import Warehouses from "./pages/Warehouses.tsx";
 import Sales from "./pages/Sales.tsx";
@@ -68,7 +69,7 @@ const ProtectedLayout = () => {
 
 const App = () => {
   const [isReady, setIsReady] = useState(false);
-  const [loadingText, setLoadingText] = useState("Loading AquaFeed ERP...");
+  const [loadingText, setLoadingText] = useState("Loading Prawns Accounting...");
   const [isServerWaking, setIsServerWaking] = useState(false);
 
   useEffect(() => {
@@ -122,7 +123,8 @@ const App = () => {
             {/* Protected App Routes */}
             <Route element={<ProtectedLayout />}>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/products" element={<Products />} />
+              <Route path="/prawns-intake" element={<PrawnsIntake />} />
+              <Route path="/freezing-batches" element={<FreezingBatches />} />
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/warehouses" element={<Warehouses />} />
               <Route path="/sales" element={<Sales />} />

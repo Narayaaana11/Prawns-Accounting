@@ -2,7 +2,7 @@
   "name": "aquafeed-erp-client",
   "private": true,
   "version": "1.0.0",
-  "description": "AquaFeed ERP - React frontend for aquaculture feed management",
+  "description": "Prawns Accounting - React frontend for aquaculture feed management",
   "type": "module",
   "engines": {
     "node": ">=18.0.0",

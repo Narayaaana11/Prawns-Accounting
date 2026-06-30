@@ -30,6 +30,7 @@ const settingsRoutes = require('./routes/settings');
 const supplierRoutes = require('./routes/suppliers');
 const purchaseOrderRoutes = require('./routes/purchaseOrders');
 const creditNoteRoutes = require('./routes/creditNotes');
+const freezingBatchRoutes = require('./routes/freezingBatches');
 
 const app = express();
 const server = http.createServer(app);
@@ -243,7 +244,7 @@ if (process.env.NODE_ENV !== 'production') {
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
-    message: 'AquaFeed ERP API is running',
+    message: 'Prawns Accounting API is running',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
   });
@@ -262,6 +263,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
 app.use('/api/credit-notes', creditNoteRoutes);
+app.use('/api/freezing-batches', freezingBatchRoutes);
 
 // Serve React frontend only if the dist folder exists (self-hosted / same-server deploy).
 // When frontend is on Vercel and backend is on Render, dist won't exist — skip silently.
@@ -312,7 +314,7 @@ setInterval(markOverdueInvoices, 6 * 60 * 60 * 1000);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`🚀 AquaFeed ERP Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Prawns Accounting Server running on http://localhost:${PORT}`);
   console.log(`🔌 WebSocket server running on ws://localhost:${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 });

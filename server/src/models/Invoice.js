@@ -27,6 +27,18 @@ const invoiceItemSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  freezingBatch: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'FreezingBatch',
+  },
+  countSize: {
+    type: String,
+    trim: true, // snapshot at time of sale
+  },
+  batchNumber: {
+    type: String,
+    trim: true, // snapshot for reference
+  },
 });
 
 const invoiceSchema = new mongoose.Schema(

@@ -206,6 +206,7 @@ export default function Inventory() {
                   <div>
                     <p className="font-medium text-foreground">{r.name}</p>
                     <p className="text-xs text-muted-foreground">{r.brand} · {r.category}</p>
+                    {(r as any).countSize && <p className="text-xs text-brand">{(r as any).countSize}</p>}
                   </div>
                 </div>
               ),
@@ -216,8 +217,17 @@ export default function Inventory() {
               cell: (r) => (
                 <div className="flex items-center gap-2">
                   <span className="font-display font-semibold text-foreground">{r.stock}</span>
-                  <span className="text-xs text-muted-foreground">bags</span>
+                  <span className="text-xs text-muted-foreground">{(r as any).countSize ? "kg" : "bags"}</span>
                 </div>
+              ),
+            },
+            {
+              key: "intakeDate",
+              header: "Intake Date",
+              cell: (r) => (
+                <span className="text-muted-foreground text-sm">
+                  {(r as any).intakeDate ? new Date((r as any).intakeDate).toLocaleDateString("en-IN") : "—"}
+                </span>
               ),
             },
             {
@@ -241,7 +251,7 @@ export default function Inventory() {
             {
               key: "lowStockThreshold",
               header: "Reorder Point",
-              cell: (r) => <span className="text-muted-foreground text-sm">{r.lowStockThreshold} bags</span>,
+              cell: (r) => <span className="text-muted-foreground text-sm">{r.lowStockThreshold} {(r as any).countSize ? "kg" : "bags"}</span>,
             },
             {
               key: "value",

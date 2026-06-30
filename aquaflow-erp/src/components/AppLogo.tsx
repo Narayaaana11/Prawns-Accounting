@@ -18,7 +18,7 @@ interface AppLogoProps {
   alt?: string;
 }
 
-export function AppLogo({ size = "sm", className, alt = "AquaFeed ERP" }: AppLogoProps) {
+export function AppLogo({ size = "sm", className, alt = "Prawns Accounting" }: AppLogoProps) {
   return (
     <img
       src={APP_LOGO_SRC}

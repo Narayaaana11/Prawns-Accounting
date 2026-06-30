@@ -25,6 +25,14 @@ const productSchema = new mongoose.Schema(
       type: String,
       trim: true, // e.g., "2mm", "4mm"
     },
+    countSize: {
+      type: String,
+      trim: true, // e.g., "40 count", "60 count" for prawns
+      enum: ['40 count', '60 count', '80 count', '100 count', '120 count', 'Other'],
+    },
+    intakeDate: {
+      type: Date,
+    },
     weight: {
       type: Number,
       required: [true, 'Weight is required'],
@@ -83,6 +91,12 @@ productSchema.virtual('stockStatus').get(function () {
   if (this.stock < this.lowStockThreshold / 2) return 'critical';
   if (this.stock < this.lowStockThreshold) return 'low_stock';
   return 'in_stock';
+});
+
+// Virtual: is prawn product
+productSchema.virtual('isPrawnProduct').get(function () {
+  const prawnCategories = ['Vannamei Prawns', 'Scampi Prawns', 'Tiger Prawns'];
+  return prawnCategories.includes(this.category) || !!this.countSize;
 });
 
 module.exports = mongoose.model('Product', productSchema);

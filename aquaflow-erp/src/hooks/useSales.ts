@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { toast } from 'sonner';
-import { openWhatsApp, getInvoiceMessage, getPaymentMessage } from '@/utils/whatsapp';
 
 export interface InvoiceItem {
   product: string;
@@ -10,6 +9,9 @@ export interface InvoiceItem {
   unitPrice: number;
   discount?: number;
   lineTotal: number;
+  freezingBatch?: string;
+  countSize?: string;
+  batchNumber?: string;
 }
 
 export interface InvoicePayment {
@@ -64,7 +66,7 @@ export function useCreateInvoice() {
   return useMutation({
     mutationFn: async (body: {
       customerId: string;
-      items: { productId: string; quantity: number; unitPrice?: number }[];
+      items: { productId: string; quantity: number; unitPrice?: number; freezingBatchId?: string }[];
       paymentType: string;
       notes?: string;
       paidAmount?: number;

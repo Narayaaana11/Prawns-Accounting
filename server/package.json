@@ -1,7 +1,7 @@
 {
   "name": "aquafeed-erp-server",
   "version": "1.0.0",
-  "description": "AquaFeed ERP - Express/MongoDB backend API with real-time WebSocket support",
+  "description": "Prawns Accounting - Express/MongoDB backend API with real-time WebSocket support",
   "main": "src/index.js",
   "type": "commonjs",
   "engines": {

@@ -48,7 +48,7 @@ export function TopNavbar({ title, subtitle }: TopNavbarProps) {
       <div className="flex items-center gap-2">
         <AppLogo size="sm" />
         <span className="font-display font-bold text-base text-foreground">
-          {user?.company?.name || "AquaFeed ERP"}
+          {user?.company?.name || "Prawns Accounting"}
         </span>
       </div>
 
