@@ -38,11 +38,11 @@ const categories = [
 ];
 
 interface ProductFormData {
-  name: string; brand: string; category: string;
-  pelletSize: string; countSize: string; intakeDate: string;
-  weight: number; price: number;
-  purchasePrice: number; stock: number; lowStockThreshold: number;
-  description: string; imageUrl: string;
+  name: string; brand?: string; category: string;
+  pelletSize?: string; countSize: string; intakeDate: string;
+  weight: number; price?: number;
+  purchasePrice: number; stock?: number; lowStockThreshold?: number;
+  description?: string; imageUrl?: string;
 }
 
 const categoryColors: Record<string, string> = {
@@ -188,14 +188,33 @@ export default function Products() {
     useForm<ProductFormData>({ mode: "onBlur" });
 
   const onAddSubmit = async (data: ProductFormData) => {
-    await createProduct.mutateAsync(data);
+    await createProduct.mutateAsync({
+      ...data,
+      brand: data.brand || "Local Farm",
+      pelletSize: data.pelletSize || "",
+      price: data.price || data.purchasePrice || 0,
+      stock: data.stock ?? 1,
+      lowStockThreshold: data.lowStockThreshold ?? 0,
+      description: data.description || "",
+      imageUrl: data.imageUrl || "",
+    });
     resetAdd();
     setIsAddOpen(false);
   };
 
   const onEditSubmit = async (data: ProductFormData) => {
     if (!selectedProduct) return;
-    await updateProduct.mutateAsync({ id: selectedProduct._id, ...data });
+    await updateProduct.mutateAsync({
+      id: selectedProduct._id,
+      ...data,
+      brand: data.brand || selectedProduct.brand || "Local Farm",
+      pelletSize: data.pelletSize || "",
+      price: data.price || data.purchasePrice || selectedProduct.price || 0,
+      stock: data.stock ?? selectedProduct.stock ?? 1,
+      lowStockThreshold: data.lowStockThreshold ?? 0,
+      description: data.description || "",
+      imageUrl: data.imageUrl || "",
+    });
     resetEdit();
     setIsEditOpen(false);
     setSelectedProduct(null);
@@ -262,7 +281,7 @@ export default function Products() {
               className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-brand text-white text-sm font-display font-semibold hover:bg-brand/90 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Add Product</span>
+              <span className="hidden sm:inline">Add Prawns Intake</span>
             </button>
           </div>
         }
@@ -546,8 +565,8 @@ export default function Products() {
           <div className="bg-surface w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl border border-border shadow-panel max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border">
               <div>
-                <h2 className="font-display font-bold text-lg text-foreground">Add Product</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">Enter product details or browse catalog</p>
+                <h2 className="font-display font-bold text-lg text-foreground">Add Prawns</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Enter prawns details or browse catalog</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -579,22 +598,9 @@ export default function Products() {
               />
               <div className="grid grid-cols-2 gap-3">
                 <FormSelect
-                  label="Brand"
-                  options={brands.map((b) => ({ value: b, label: b }))}
-                  name="brand" control={controlAdd} required
-                  error={addErrors.brand}
-                />
-                <FormSelect
                   label="Category"
                   options={categories.map((c) => ({ value: c, label: c }))}
                   name="category" control={controlAdd}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <FormSelect
-                  label="Count Size"
-                  options={["40 count", "60 count", "80 count", "100 count", "120 count", "Other"].map((c) => ({ value: c, label: c }))}
-                  name="countSize" control={controlAdd}
                 />
                 <FormInput
                   type="date"
@@ -603,7 +609,11 @@ export default function Products() {
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <FormInput label="Pellet Size" placeholder="2mm" {...registerAdd("pelletSize")} />
+                <FormSelect
+                  label="Count Size"
+                  options={["40 count", "60 count", "80 count", "100 count", "120 count", "Other"].map((c) => ({ value: c, label: c }))}
+                  name="countSize" control={controlAdd}
+                />
                 <FormNumber
                   label="Weight (kg)"
                   placeholder="25"
@@ -611,25 +621,7 @@ export default function Products() {
                   error={addErrors.weight}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <FormNumber
-                  label="Sale Price (₹)"
-                  prefix="₹"
-                  placeholder="3200"
-                  {...registerAdd("price", validationRules.price)}
-                  error={addErrors.price}
-                />
-                <FormNumber label="Purchase Price (₹)" prefix="₹" placeholder="2600" {...registerAdd("purchasePrice")} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <FormNumber
-                  label="Stock Qty"
-                  placeholder="0"
-                  {...registerAdd("stock", validationRules.quantity)}
-                  error={addErrors.stock}
-                />
-                <FormNumber label="Low Stock Alert" placeholder="10" {...registerAdd("lowStockThreshold")} />
-              </div>
+              <FormNumber label="Purchase Price (₹)" prefix="₹" placeholder="2600" {...registerAdd("purchasePrice")} />
 
               <div className="flex gap-3 pt-2">
                 <button
@@ -646,7 +638,7 @@ export default function Products() {
                 >
                   {createProduct.isPending ? (
                     <><div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /><span>Adding…</span></>
-                  ) : "Add Product"}
+                  ) : "Add Prawns"}
                 </button>
               </div>
             </form>
@@ -682,8 +674,8 @@ export default function Products() {
             <form onSubmit={handleEditSubmit(onEditSubmit)} className="p-5 space-y-4">
               <FormInput label="Product Name" {...registerEdit("name", validationRules.productName)} error={editErrors.name} />
               <div className="grid grid-cols-2 gap-3">
-                <FormSelect label="Brand" options={brands.map((b) => ({ value: b, label: b }))} name="brand" control={controlEdit} required error={editErrors.brand} />
                 <FormSelect label="Category" options={categories.map((c) => ({ value: c, label: c }))} name="category" control={controlEdit} />
+                <FormInput type="date" label="Intake Date" {...registerEdit("intakeDate")} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <FormSelect
@@ -691,24 +683,9 @@ export default function Products() {
                   options={["40 count", "60 count", "80 count", "100 count", "120 count", "Other"].map((c) => ({ value: c, label: c }))}
                   name="countSize" control={controlEdit}
                 />
-                <FormInput
-                  type="date"
-                  label="Intake Date"
-                  {...registerEdit("intakeDate")}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <FormInput label="Pellet Size" {...registerEdit("pelletSize")} />
                 <FormNumber label="Weight (kg)" {...registerEdit("weight", { required: "Required", min: { value: 0.1, message: "Must be > 0" } })} error={editErrors.weight} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <FormNumber label="Sale Price (₹)" prefix="₹" {...registerEdit("price", validationRules.price)} error={editErrors.price} />
-                <FormNumber label="Purchase Price (₹)" prefix="₹" {...registerEdit("purchasePrice")} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <FormNumber label="Stock Qty" {...registerEdit("stock", validationRules.quantity)} error={editErrors.stock} />
-                <FormNumber label="Low Stock Alert" {...registerEdit("lowStockThreshold")} />
-              </div>
+              <FormNumber label="Purchase Price (₹)" prefix="₹" {...registerEdit("purchasePrice")} />
 
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => { setIsEditOpen(false); setSelectedProduct(null); }} className="flex-1 h-11 rounded-xl border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors">Cancel</button>
