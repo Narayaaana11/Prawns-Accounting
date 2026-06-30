@@ -138,16 +138,16 @@ const seed = async () => {
 
   // Create Products
   const productsData = [
-    { name: 'Catla Starter 2mm', brand: 'AquaGrow', category: 'Starter', pelletSize: '2mm', weight: 50, price: 3200, purchasePrice: 2600, stock: 120, lowStockThreshold: 20 },
-    { name: 'Rohu Grower 4mm', brand: 'BioFeed', category: 'Grower', pelletSize: '4mm', weight: 25, price: 2800, purchasePrice: 2200, stock: 85, lowStockThreshold: 20 },
-    { name: 'Shrimp Feed S2', brand: 'MarineX', category: 'Shrimp', pelletSize: '1.5mm', weight: 10, price: 1600, purchasePrice: 1200, stock: 6, lowStockThreshold: 15 },
-    { name: 'Tilapia Finisher 6mm', brand: 'AquaGrow', category: 'Finisher', pelletSize: '6mm', weight: 50, price: 3900, purchasePrice: 3100, stock: 43, lowStockThreshold: 20 },
-    { name: 'Mrigal Pellet 3mm', brand: 'GreenFeed', category: 'Grower', pelletSize: '3mm', weight: 25, price: 2400, purchasePrice: 1900, stock: 3, lowStockThreshold: 15 },
-    { name: 'Catfish Grower', brand: 'BioFeed', category: 'Grower', pelletSize: '4mm', weight: 50, price: 3500, purchasePrice: 2800, stock: 67, lowStockThreshold: 20 },
-    { name: 'Pangasius Starter', brand: 'MarineX', category: 'Starter', pelletSize: '2mm', weight: 10, price: 1400, purchasePrice: 1100, stock: 9, lowStockThreshold: 15 },
-    { name: 'Vannamei Shrimp Feed', brand: 'MarineX', category: 'Shrimp', pelletSize: '1mm', weight: 5, price: 2200, purchasePrice: 1700, stock: 32, lowStockThreshold: 20 },
-    { name: 'Carp Finisher 8mm', brand: 'AquaGrow', category: 'Finisher', pelletSize: '8mm', weight: 50, price: 4100, purchasePrice: 3300, stock: 28, lowStockThreshold: 15 },
-    { name: 'Ornamental Fish Feed', brand: 'GreenFeed', category: 'Specialty', pelletSize: '1mm', weight: 2, price: 850, purchasePrice: 600, stock: 55, lowStockThreshold: 10 },
+    { name: 'Vannamei Raw Prawns 40 count', brand: 'Aqua Farms', category: 'Vannamei Prawns', countSize: '40 count', weight: 25, price: 450, purchasePrice: 380, stock: 120, lowStockThreshold: 20 },
+    { name: 'Vannamei Raw Prawns 60 count', brand: 'Coastal Prawns', category: 'Vannamei Prawns', countSize: '60 count', weight: 25, price: 400, purchasePrice: 340, stock: 85, lowStockThreshold: 20 },
+    { name: 'Vannamei Raw Prawns 80 count', brand: 'Marine Fresh', category: 'Vannamei Prawns', countSize: '80 count', weight: 25, price: 350, purchasePrice: 300, stock: 15, lowStockThreshold: 15 },
+    { name: 'Tiger Prawns 40 count', brand: 'Bay Seafood', category: 'Tiger Prawns', countSize: '40 count', weight: 20, price: 750, purchasePrice: 650, stock: 43, lowStockThreshold: 20 },
+    { name: 'Tiger Prawns 60 count', brand: 'Coastal Prawns', category: 'Tiger Prawns', countSize: '60 count', weight: 20, price: 650, purchasePrice: 550, stock: 12, lowStockThreshold: 15 },
+    { name: 'Tiger Prawns 100 count', brand: 'Ocean Harvest', category: 'Tiger Prawns', countSize: '100 count', weight: 20, price: 550, purchasePrice: 470, stock: 67, lowStockThreshold: 20 },
+    { name: 'Scampi Prawns 60 count', brand: 'Marine Fresh', category: 'Scampi Prawns', countSize: '60 count', weight: 15, price: 600, purchasePrice: 500, stock: 9, lowStockThreshold: 15 },
+    { name: 'Scampi Prawns 80 count', brand: 'Marine Fresh', category: 'Scampi Prawns', countSize: '80 count', weight: 15, price: 550, purchasePrice: 460, stock: 32, lowStockThreshold: 20 },
+    { name: 'White Prawns 80 count', brand: 'Bay Seafood', category: 'White Prawns', countSize: '80 count', weight: 30, price: 580, purchasePrice: 490, stock: 28, lowStockThreshold: 15 },
+    { name: 'White Prawns 100 count', brand: 'Bay Seafood', category: 'White Prawns', countSize: '100 count', weight: 30, price: 500, purchasePrice: 420, stock: 55, lowStockThreshold: 10 },
   ];
 
   const products = await Product.insertMany(productsData.map((p) => ({ ...p, company: company._id })));

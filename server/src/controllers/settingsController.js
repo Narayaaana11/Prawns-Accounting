@@ -163,11 +163,11 @@ const loadDemoData = async (req, res, next) => {
     // Set batchCounter for the company
     await Company.findByIdAndUpdate(companyId, { batchCounter: 4 });
 
-    // Create Products (both Feed and Prawn Intake Lots)
+    // Create Products (only Prawn Intake Lots)
     const productsData = [
-      { name: 'Growel Floating Fish Feed 4mm', brand: 'Growel Feeds', category: 'Floating Fish Feed', pelletSize: '4mm', weight: 50, price: 3200, purchasePrice: 2600, stock: 120, lowStockThreshold: 20, imageUrl: 'https://5.imimg.com/data5/SELLER/Default/2022/9/MJ/GD/DA/3948456/growel-floating-fish-feed-500x500.jpg' },
-      { name: 'Avanti Manamei Vannamei Starter S1', brand: 'Avanti Feeds', category: 'Shrimp Feed (Vannamei)', pelletSize: '1.2mm', weight: 25, price: 2800, purchasePrice: 2200, stock: 85, lowStockThreshold: 20, imageUrl: 'https://5.imimg.com/data5/SELLER/Default/2022/11/EM/LI/KH/8855308/avanti-manamei-fish-feed-500x500.jpg' },
-      { name: 'CP Scampi Grower 3mm', brand: 'CP Aquaculture', category: 'Scampi Feed', pelletSize: '3mm', weight: 10, price: 1600, purchasePrice: 1200, stock: 6, lowStockThreshold: 15, imageUrl: 'https://5.imimg.com/data5/SELLER/Default/2023/2/280988721/LF/HE/GX/8672308/cp-shrimp-feed-500x500.jpg' },
+      { name: 'White Prawns 100 count', brand: 'Bay Seafood', category: 'White Prawns', countSize: '100 count', weight: 50, price: 500, purchasePrice: 420, stock: 120, lowStockThreshold: 20, intakeDate: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 3) },
+      { name: 'Vannamei Raw Prawns 120 count', brand: 'Premium Prawns', category: 'Vannamei Prawns', countSize: '120 count', weight: 25, price: 400, purchasePrice: 340, stock: 85, lowStockThreshold: 20, intakeDate: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1) },
+      { name: 'Scampi Prawns 100 count', brand: 'Ocean Harvest', category: 'Scampi Prawns', countSize: '100 count', weight: 10, price: 520, purchasePrice: 440, stock: 60, lowStockThreshold: 15, intakeDate: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6) },
       { name: 'Vannamei Raw Prawns 40 count', brand: 'Aqua Farms', category: 'Vannamei Prawns', countSize: '40 count', weight: 25, price: 450, purchasePrice: 380, stock: 150, lowStockThreshold: 20, intakeDate: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2) },
       { name: 'Tiger Prawns 60 count', brand: 'Coastal Prawns', category: 'Tiger Prawns', countSize: '60 count', weight: 20, price: 650, purchasePrice: 550, stock: 80, lowStockThreshold: 15, intakeDate: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 5) },
       { name: 'Scampi Prawns 80 count', brand: 'Marine Fresh', category: 'Scampi Prawns', countSize: '80 count', weight: 15, price: 550, purchasePrice: 460, stock: 60, lowStockThreshold: 10, intakeDate: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 10) },

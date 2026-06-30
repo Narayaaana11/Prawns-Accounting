@@ -12,16 +12,11 @@ interface ProductCatalogBrowserProps {
 const PAGE_SIZE = 10;
 
 const categoryColors: Record<string, string> = {
-  "Shrimp Feed (Vannamei)": "bg-sky-100 text-sky-700",
-  "Floating Fish Feed": "bg-emerald-100 text-emerald-700",
-  "Sinking Fish Feed": "bg-blue-100 text-blue-700",
-  "Scampi Feed": "bg-violet-100 text-violet-700",
-  "Starter Pellets": "bg-amber-100 text-amber-700",
-  "Grower Pellets": "bg-lime-100 text-lime-700",
-  "Finisher Pellets": "bg-orange-100 text-orange-700",
-  "Probiotics & Supplements": "bg-pink-100 text-pink-700",
-  "Minerals & Chemicals": "bg-slate-100 text-slate-700",
-  "Medicines & Veterinary": "bg-red-100 text-red-700",
+  "Vannamei Prawns": "bg-sky-100 text-sky-700",
+  "Tiger Prawns": "bg-orange-100 text-orange-700",
+  "Scampi Prawns": "bg-violet-100 text-violet-700",
+  "White Prawns": "bg-emerald-100 text-emerald-700",
+  "Other": "bg-gray-100 text-gray-700",
 };
 
 export function ProductCatalogBrowser({ onSelect, onClose }: ProductCatalogBrowserProps) {
@@ -173,11 +168,15 @@ export function ProductCatalogBrowser({ onSelect, onClose }: ProductCatalogBrows
                         <span className="flex items-center gap-0.5">
                           <Weight className="w-2.5 h-2.5" />{product.weight}kg
                         </span>
-                        {product.pelletSize && (
+                        {product.countSize ? (
+                          <span className="flex items-center gap-0.5">
+                            <Tag className="w-2.5 h-2.5" />{product.countSize}
+                          </span>
+                        ) : product.pelletSize ? (
                           <span className="flex items-center gap-0.5">
                             <Ruler className="w-2.5 h-2.5" />{product.pelletSize}
                           </span>
-                        )}
+                        ) : null}
                       </div>
                       {product.suggestedPrice && (
                         <p className="mt-1.5 text-xs font-display font-bold text-brand">
