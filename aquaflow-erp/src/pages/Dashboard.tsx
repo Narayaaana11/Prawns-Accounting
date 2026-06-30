@@ -4,7 +4,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   ShoppingCart, Package, AlertTriangle, Users, TrendingUp,
-  DollarSign, Calendar, RefreshCw
+  DollarSign, Calendar, RefreshCw, Weight
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -107,7 +107,7 @@ export default function Dashboard() {
   const inventoryValue = inventoryData?.breakdown || [];
   const topProducts = topProductsData || [];
 
-  const isEmptyWorkspace = !dashLoading && (kpis?.products?.value === 0 || !kpis?.products?.value);
+  const isEmptyWorkspace = !dashLoading && (kpis?.production?.value === 0 || !kpis?.production?.value);
 
   return (
     <AppLayout title="Dashboard" subtitle={today}>
@@ -211,18 +211,17 @@ export default function Dashboard() {
         />
         <StatCard
           title="Total Production"
-          value={dashLoading ? "..." : String(kpis?.products?.value || 0)}
-          change="Kilograms produced"
-          changeType="neutral"
+          value={dashLoading ? "..." : `${(kpis?.production?.value || 0).toLocaleString("en-IN")} kg`}
+          change={`${kpis?.production?.change >= 0 ? "+" : ""}${kpis?.production?.change || 0}% vs previous`}
+          changeType={kpis?.production?.change >= 0 ? "positive" : "negative"}
           icon={Package}
         />
         <StatCard
           title="Meat Purchased"
-          value={dashLoading ? "..." : String(kpis?.lowStock?.value || 0)}
-          change="Kilograms"
-          changeType={kpis?.lowStock?.value > 0 ? "negative" : "positive"}
-          icon={AlertTriangle}
-          iconColor="bg-warning/10 text-warning"
+          value={dashLoading ? "..." : `${(kpis?.meatPurchased?.value || 0).toLocaleString("en-IN")} kg`}
+          change={`${kpis?.meatPurchased?.change >= 0 ? "+" : ""}${kpis?.meatPurchased?.change || 0}% vs previous`}
+          changeType={kpis?.meatPurchased?.change >= 0 ? "positive" : "negative"}
+          icon={Weight}
         />
         <StatCard
           title="Total Customers"

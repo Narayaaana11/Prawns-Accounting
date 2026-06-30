@@ -2,6 +2,7 @@ const Invoice = require('../models/Invoice');
 const Expense = require('../models/Expense');
 const Product = require('../models/Product');
 const Customer = require('../models/Customer');
+const FreezingBatch = require('../models/FreezingBatch');
 const { emitDashboardUpdate, emitLowStockAlert } = require('../utils/websocket');
 
 // GET /api/reports/dashboard
@@ -30,8 +31,10 @@ const getDashboard = async (req, res, next) => {
     const [
       currentSales,
       prevSales,
-      totalProducts,
-      lowStockCount,
+      currentProduction,
+      prevProduction,
+      currentMeatPurchased,
+      prevMeatPurchased,
       totalCustomers,
       totalExpenses,
       recentInvoices,
@@ -46,8 +49,48 @@ const getDashboard = async (req, res, next) => {
         { $match: { company: companyId, status: { $in: ['Paid', 'Credit'] }, createdAt: { $gte: prevStartDate, $lt: startDate } } },
         { $group: { _id: null, total: { $sum: '$total' } } },
       ]),
-      Product.countDocuments({ company: companyId, isActive: true }),
-      Product.countDocuments({ company: companyId, isActive: true, $expr: { $lt: ['$stock', '$lowStockThreshold'] } }),
+      FreezingBatch.aggregate([
+        { $match: { company: companyId, dateFrozen: { $gte: startDate } } },
+        { $group: { _id: null, total: { $sum: '$quantityKgs' } } },
+      ]),
+      FreezingBatch.aggregate([
+        { $match: { company: companyId, dateFrozen: { $gte: prevStartDate, $lt: startDate } } },
+        { $group: { _id: null, total: { $sum: '$quantityKgs' } } },
+      ]),
+      Product.aggregate([
+        {
+          $match: {
+            company: companyId,
+            isActive: true,
+            $or: [
+              { category: { $in: ['Vannamei Prawns', 'Scampi Prawns', 'Tiger Prawns', 'White Prawns'] } },
+              { countSize: { $ne: null, $ne: '' } }
+            ],
+            $or: [
+              { intakeDate: { $gte: startDate } },
+              { intakeDate: null, createdAt: { $gte: startDate } }
+            ]
+          }
+        },
+        { $group: { _id: null, total: { $sum: { $multiply: [{ $ifNull: ['$weight', 0] }, { $ifNull: ['$stock', 0] }] } } } },
+      ]),
+      Product.aggregate([
+        {
+          $match: {
+            company: companyId,
+            isActive: true,
+            $or: [
+              { category: { $in: ['Vannamei Prawns', 'Scampi Prawns', 'Tiger Prawns', 'White Prawns'] } },
+              { countSize: { $ne: null, $ne: '' } }
+            ],
+            $or: [
+              { intakeDate: { $gte: prevStartDate, $lt: startDate } },
+              { intakeDate: null, createdAt: { $gte: prevStartDate, $lt: startDate } }
+            ]
+          }
+        },
+        { $group: { _id: null, total: { $sum: { $multiply: [{ $ifNull: ['$weight', 0] }, { $ifNull: ['$stock', 0] }] } } } },
+      ]),
       Customer.countDocuments({ company: companyId, isActive: true }),
       Expense.aggregate([
         { $match: { company: companyId, status: 'Approved', date: { $gte: startDate } } },
@@ -65,13 +108,21 @@ const getDashboard = async (req, res, next) => {
     const prevTotal = prevSales[0]?.total || 0;
     const salesChange = prevTotal > 0 ? (((currentTotal - prevTotal) / prevTotal) * 100).toFixed(1) : 0;
 
+    const currentProductionTotal = currentProduction[0]?.total || 0;
+    const prevProductionTotal = prevProduction[0]?.total || 0;
+    const productionChange = prevProductionTotal > 0 ? (((currentProductionTotal - prevProductionTotal) / prevProductionTotal) * 100).toFixed(1) : 0;
+
+    const currentMeatPurchasedTotal = currentMeatPurchased[0]?.total || 0;
+    const prevMeatPurchasedTotal = prevMeatPurchased[0]?.total || 0;
+    const meatPurchasedChange = prevMeatPurchasedTotal > 0 ? (((currentMeatPurchasedTotal - prevMeatPurchasedTotal) / prevMeatPurchasedTotal) * 100).toFixed(1) : 0;
+
     const dashboardData = {
       success: true,
       data: {
         kpis: {
           sales: { value: currentTotal, count: currentSales[0]?.count || 0, change: parseFloat(salesChange) },
-          products: { value: totalProducts },
-          lowStock: { value: lowStockCount },
+          production: { value: currentProductionTotal, change: parseFloat(productionChange) },
+          meatPurchased: { value: currentMeatPurchasedTotal, change: parseFloat(meatPurchasedChange) },
           customers: { value: totalCustomers },
           expenses: { value: totalExpenses[0]?.total || 0 },
           overdue: { value: overdueCount },

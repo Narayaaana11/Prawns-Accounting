@@ -7,6 +7,7 @@ const Expense = require('../models/Expense');
 const Warehouse = require('../models/Warehouse');
 const Inventory = require('../models/Inventory');
 const StockAdjustment = require('../models/StockAdjustment');
+const FreezingBatch = require('../models/FreezingBatch');
 
 // GET /api/settings/company
 const getCompany = async (req, res, next) => {
@@ -72,6 +73,7 @@ const loadDemoData = async (req, res, next) => {
   try {
     const companyId = req.companyId;
     const userId = req.user._id;
+    const now = new Date();
 
     // Clear existing company data first to prevent duplicate key or messy dashboard
     await Promise.all([
@@ -82,6 +84,7 @@ const loadDemoData = async (req, res, next) => {
       Warehouse.deleteMany({ company: companyId }),
       Inventory.deleteMany({ company: companyId }),
       StockAdjustment.deleteMany({ company: companyId }),
+      FreezingBatch.deleteMany({ company: companyId }),
     ]);
 
     // Create Warehouses
@@ -113,13 +116,61 @@ const loadDemoData = async (req, res, next) => {
       company: companyId,
     });
 
-    // Create Products
+    // Seed Freezing Batches
+    await FreezingBatch.create([
+      {
+        batchNumber: 'FB-0001',
+        dateFrozen: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 3),
+        datePacked: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2),
+        quantityKgs: 1200,
+        countSize: '40 count',
+        warehouse: warehouse1._id,
+        location: 'Chamber A-3',
+        status: 'packed',
+        remainingKgs: 0,
+        notes: 'Excellent quality Vannamei crop from local farm',
+        company: companyId,
+        createdBy: userId,
+      },
+      {
+        batchNumber: 'FB-0002',
+        dateFrozen: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1),
+        quantityKgs: 850,
+        countSize: '60 count',
+        warehouse: warehouse1._id,
+        location: 'Chamber B-1',
+        status: 'frozen',
+        remainingKgs: 850,
+        notes: 'Regular batch from Coastal Prawns',
+        company: companyId,
+        createdBy: userId,
+      },
+      {
+        batchNumber: 'FB-0003',
+        dateFrozen: new Date(now.getFullYear(), now.getMonth() - 1, 15), // Last month
+        quantityKgs: 1500,
+        countSize: '80 count',
+        warehouse: warehouse2._id,
+        location: 'Chamber C-2',
+        status: 'partial',
+        remainingKgs: 500,
+        notes: 'Seeded historical batch',
+        company: companyId,
+        createdBy: userId,
+      }
+    ]);
+    
+    // Set batchCounter for the company
+    await Company.findByIdAndUpdate(companyId, { batchCounter: 4 });
+
+    // Create Products (both Feed and Prawn Intake Lots)
     const productsData = [
       { name: 'Growel Floating Fish Feed 4mm', brand: 'Growel Feeds', category: 'Floating Fish Feed', pelletSize: '4mm', weight: 50, price: 3200, purchasePrice: 2600, stock: 120, lowStockThreshold: 20, imageUrl: 'https://5.imimg.com/data5/SELLER/Default/2022/9/MJ/GD/DA/3948456/growel-floating-fish-feed-500x500.jpg' },
       { name: 'Avanti Manamei Vannamei Starter S1', brand: 'Avanti Feeds', category: 'Shrimp Feed (Vannamei)', pelletSize: '1.2mm', weight: 25, price: 2800, purchasePrice: 2200, stock: 85, lowStockThreshold: 20, imageUrl: 'https://5.imimg.com/data5/SELLER/Default/2022/11/EM/LI/KH/8855308/avanti-manamei-fish-feed-500x500.jpg' },
       { name: 'CP Scampi Grower 3mm', brand: 'CP Aquaculture', category: 'Scampi Feed', pelletSize: '3mm', weight: 10, price: 1600, purchasePrice: 1200, stock: 6, lowStockThreshold: 15, imageUrl: 'https://5.imimg.com/data5/SELLER/Default/2023/2/280988721/LF/HE/GX/8672308/cp-shrimp-feed-500x500.jpg' },
-      { name: 'Cargill Sinking Rohu Finisher', brand: 'Cargill', category: 'Sinking Fish Feed', pelletSize: '6mm', weight: 50, price: 3900, purchasePrice: 3100, stock: 43, lowStockThreshold: 20, imageUrl: 'https://5.imimg.com/data5/SELLER/Default/2022/7/TW/LB/HJ/6182744/cargill-aqua-fish-feed-500x500.jpg' },
-      { name: 'ABIS Pangasius Starter', brand: 'ABIS (IB Group)', category: 'Starter Pellets', pelletSize: '2mm', weight: 25, price: 2400, purchasePrice: 1900, stock: 3, lowStockThreshold: 15, imageUrl: 'https://5.imimg.com/data5/SELLER/Default/2022/4/PX/LM/QW/50099555/abis-fish-feed-500x500.jpg' },
+      { name: 'Vannamei Raw Prawns 40 count', brand: 'Aqua Farms', category: 'Vannamei Prawns', countSize: '40 count', weight: 25, price: 450, purchasePrice: 380, stock: 150, lowStockThreshold: 20, intakeDate: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2) },
+      { name: 'Tiger Prawns 60 count', brand: 'Coastal Prawns', category: 'Tiger Prawns', countSize: '60 count', weight: 20, price: 650, purchasePrice: 550, stock: 80, lowStockThreshold: 15, intakeDate: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 5) },
+      { name: 'Scampi Prawns 80 count', brand: 'Marine Fresh', category: 'Scampi Prawns', countSize: '80 count', weight: 15, price: 550, purchasePrice: 460, stock: 60, lowStockThreshold: 10, intakeDate: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 10) },
     ];
 
     const products = await Product.insertMany(productsData.map((p) => ({ ...p, company: companyId })));
@@ -155,7 +206,6 @@ const loadDemoData = async (req, res, next) => {
     const companyShort = companyId.toString().slice(-4).toUpperCase();
     const prefix = company?.invoicePrefix || 'INV';
 
-    const now = new Date();
     const invoices = [];
     const monthlyTargets = [45000, 52000, 61000, 78000, 93000, 85000]; // 6 months of data
 
@@ -269,6 +319,7 @@ const clearCompanyData = async (req, res, next) => {
       Warehouse.deleteMany({ company: companyId }),
       Inventory.deleteMany({ company: companyId }),
       StockAdjustment.deleteMany({ company: companyId }),
+      FreezingBatch.deleteMany({ company: companyId }),
     ]);
 
     res.json({ success: true, message: 'All workspace data cleared successfully!' });
