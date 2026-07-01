@@ -16,7 +16,6 @@ import {
   useDeleteProduct, type Product
 } from "@/hooks/useProducts";
 import { useProducts as useProductsWebSocket } from "@/hooks/useModuleWebSocket";
-import { LOW_STOCK_THRESHOLD } from "@/lib/formatters";
 import { AP_CATALOG, type CatalogProduct } from "@/data/apAquaCatalog";
 import { createPortal } from "react-dom";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
@@ -125,7 +124,6 @@ function ProductImage({ product }: { product: Product }) {
 export default function Products() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("All Brands");
-  const [selectedStockFilter, setSelectedStockFilter] = useState("All Stock");
   const [page, setPage] = useState(1);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -138,10 +136,6 @@ export default function Products() {
   const { data: allProducts = [], isLoading, refetch } = useProducts({
     search: searchQuery || undefined,
     brand: selectedBrand !== "All Brands" ? selectedBrand : undefined,
-    stockStatus:
-      selectedStockFilter === "Low Stock" ? "low_stock"
-        : selectedStockFilter === "In Stock" ? "in_stock"
-          : undefined,
   });
 
   // WebSocket integration for product updates
@@ -175,15 +169,12 @@ export default function Products() {
     [allProducts, currentPage]
   );
 
-  const lowStockCount = allProducts.filter(
-    (p) => p.stock < (p.lowStockThreshold || LOW_STOCK_THRESHOLD)
-  ).length;
-
   const { register: registerAdd, control: controlAdd, handleSubmit: handleAddSubmit, reset: resetAdd,
     setValue: setAddValue, formState: { errors: addErrors } } =
     useForm<ProductFormData>({ mode: "onBlur" });
 
   const { register: registerEdit, control: controlEdit, handleSubmit: handleEditSubmit, reset: resetEdit,
+    setValue: setEditValue,
     formState: { errors: editErrors } } =
     useForm<ProductFormData>({ mode: "onBlur" });
 
@@ -192,7 +183,10 @@ export default function Products() {
       ...data,
       brand: data.brand || "Local Farm",
       pelletSize: data.pelletSize || "",
-      price: data.price || data.purchasePrice || 0,
+      countSize: data.countSize || "",
+      intakeDate: data.intakeDate || new Date().toISOString(),
+      price: data.purchasePrice || data.price || 0,
+      purchasePrice: data.purchasePrice || data.price || 0,
       stock: data.stock ?? 1,
       lowStockThreshold: data.lowStockThreshold ?? 0,
       description: data.description || "",
@@ -209,7 +203,10 @@ export default function Products() {
       ...data,
       brand: data.brand || selectedProduct.brand || "Local Farm",
       pelletSize: data.pelletSize || "",
-      price: data.price || data.purchasePrice || selectedProduct.price || 0,
+      countSize: data.countSize || "",
+      intakeDate: data.intakeDate || selectedProduct.intakeDate || new Date().toISOString(),
+      price: data.purchasePrice || data.price || selectedProduct.purchasePrice || selectedProduct.price || 0,
+      purchasePrice: data.purchasePrice || data.price || selectedProduct.purchasePrice || selectedProduct.price || 0,
       stock: data.stock ?? selectedProduct.stock ?? 1,
       lowStockThreshold: data.lowStockThreshold ?? 0,
       description: data.description || "",
@@ -224,10 +221,10 @@ export default function Products() {
     setSelectedProduct(product);
     resetEdit({
       name: product.name, brand: product.brand, category: product.category,
-      pelletSize: product.pelletSize || "", countSize: (product as any).countSize || "",
+      pelletSize: product.pelletSize || "", countSize: product.countSize || product.pelletSize || "",
       intakeDate: (product as any).intakeDate ? new Date((product as any).intakeDate).toISOString().split('T')[0] : "",
       weight: product.weight,
-      price: product.price, purchasePrice: product.purchasePrice || 0,
+      price: product.price, purchasePrice: product.purchasePrice || product.price || 0,
       stock: product.stock, lowStockThreshold: product.lowStockThreshold,
       description: product.description || "", imageUrl: product.imageUrl || "",
     });
@@ -249,18 +246,40 @@ export default function Products() {
       setAddValue("name", catalogProduct.name);
       setAddValue("brand", catalogProduct.brand);
       setAddValue("category", catalogProduct.category);
-      setAddValue("pelletSize", catalogProduct.pelletSize || "");
+      setAddValue("countSize", catalogProduct.countSize || "");
       setAddValue("weight", catalogProduct.weight);
-      setAddValue("price", catalogProduct.suggestedPrice || 0);
-      setAddValue("purchasePrice", catalogProduct.suggestedPurchasePrice || 0);
+      setAddValue("intakeDate", new Date().toISOString().split("T")[0]);
+      setAddValue("price", catalogProduct.suggestedPurchasePrice || catalogProduct.suggestedPrice || 0);
+      setAddValue("purchasePrice", catalogProduct.suggestedPurchasePrice || catalogProduct.suggestedPrice || 0);
       setAddValue("description", catalogProduct.description);
       setAddValue("imageUrl", catalogProduct.imageUrl);
     }, 50);
   };
 
+  const handleCatalogSelectForEdit = (catalogProduct: CatalogProduct) => {
+    setIsCatalogOpen(false);
+    if (!selectedProduct) return;
+    setTimeout(() => {
+      setEditValue("name", catalogProduct.name);
+      setEditValue("brand", catalogProduct.brand);
+      setEditValue("category", catalogProduct.category);
+      setEditValue("countSize", catalogProduct.countSize || "");
+      setEditValue("weight", catalogProduct.weight);
+      setEditValue(
+        "intakeDate",
+        selectedProduct.intakeDate
+          ? new Date(selectedProduct.intakeDate).toISOString().split("T")[0]
+          : new Date().toISOString().split("T")[0]
+      );
+      setEditValue("price", catalogProduct.suggestedPurchasePrice || catalogProduct.suggestedPrice || 0);
+      setEditValue("purchasePrice", catalogProduct.suggestedPurchasePrice || catalogProduct.suggestedPrice || 0);
+      setEditValue("description", catalogProduct.description);
+      setEditValue("imageUrl", catalogProduct.imageUrl);
+    }, 50);
+  };
+
   const handleSearchChange = (v: string) => { setSearchQuery(v); setPage(1); };
   const handleBrandChange = (v: string) => { setSelectedBrand(v); setPage(1); };
-  const handleStockChange = (v: string) => { setSelectedStockFilter(v); setPage(1); };
 
   return (
     <AppLayout title="Prawns Intake" subtitle="Manage your prawns intake records">
@@ -304,8 +323,8 @@ export default function Products() {
           )}
         </div> */}
         <div className="flex gap-2">
-          
-      {/* <Select value={String(selectedBrand)} onValueChange={(val) => handleBrandChange(val)}>
+
+          {/* <Select value={String(selectedBrand)} onValueChange={(val) => handleBrandChange(val)}>
         <SelectTrigger className="flex-1 sm:flex-none h-10 px-3 rounded-xl border border-border bg-surface text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/50">
           <SelectValue />
         </SelectTrigger>
@@ -316,21 +335,8 @@ export default function Products() {
           
         </SelectContent>
       </Select> */}
-    
-          
-      {/* <Select value={String(selectedStockFilter)} onValueChange={(val) => handleStockChange(val)}>
-        <SelectTrigger className="flex-1 sm:flex-none h-10 px-3 rounded-xl border border-border bg-surface text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/50">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          
-            <SelectItem value={"All Stock".toString()}>All Stock</SelectItem>
-            <SelectItem value={"Low Stock".toString()}>Low Stock</SelectItem>
-            <SelectItem value={"In Stock".toString()}>In Stock</SelectItem>
-          
-        </SelectContent>
-      </Select> */}
-    
+
+
         </div>
       </div>
 
@@ -368,9 +374,6 @@ export default function Products() {
           {/* Mobile Card Grid */}
           <div className="sm:hidden space-y-3">
             {products.map((p) => {
-              const threshold = p.lowStockThreshold || LOW_STOCK_THRESHOLD;
-              const isLow = p.stock < threshold;
-              const isCritical = p.stock < threshold / 2;
               return (
                 <div
                   key={p._id}
@@ -391,22 +394,16 @@ export default function Products() {
                   <div className="border-t border-border/50 px-3 py-2 flex items-center justify-between">
                     <div className="flex items-center gap-4 text-xs">
                       <div>
-                        <p className="text-muted-foreground text-[10px]">Sale Price</p>
-                        <p className="font-display font-bold text-foreground">₹{p.price.toLocaleString("en-IN")}</p>
+                        <p className="text-muted-foreground text-[10px]">Purchase Price</p>
+                        <p className="font-display font-bold text-foreground">₹{(p.purchasePrice || p.price).toLocaleString("en-IN")}</p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground text-[10px]">Stock</p>
-                        <div className="flex items-center gap-1">
-                          <p className={`font-display font-bold ${isCritical ? "text-destructive" : isLow ? "text-warning" : "text-foreground"}`}>
-                            {p.stock} bags
-                          </p>
-                          {isCritical && <AlertTriangle className="w-3 h-3 text-destructive" />}
-                          {!isCritical && isLow && <AlertTriangle className="w-3 h-3 text-warning" />}
-                        </div>
+                        <p className="text-muted-foreground text-[10px]">Intake Date</p>
+                        <p className="font-semibold text-foreground">{p.intakeDate ? new Date(p.intakeDate).toLocaleDateString("en-IN") : "-"}</p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground text-[10px]">Weight</p>
-                        <p className="font-semibold text-foreground">{p.weight}kg</p>
+                        <p className="text-muted-foreground text-[10px]">Count / Wt</p>
+                        <p className="font-semibold text-foreground">{p.countSize || p.pelletSize || "-"} · {p.weight}kg</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
@@ -433,79 +430,66 @@ export default function Products() {
           <div className="hidden sm:block bg-surface rounded-2xl border border-border shadow-card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-background">
-                  <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Product</th>
-                  <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Category</th>
-                  <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Size / Wt</th>
-                  <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Price</th>
-                  <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Stock</th>
-                  <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((p) => {
-                  const threshold = p.lowStockThreshold || LOW_STOCK_THRESHOLD;
-                  const isLow = p.stock < threshold;
-                  const isCritical = p.stock < threshold / 2;
-                  return (
-                    <tr key={p._id} className="border-b border-border last:border-0 hover:bg-background/50 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <ProductImage product={p} />
-                          <div>
-                            <p className="font-medium text-foreground">{p.name}</p>
-                            <p className="text-xs text-muted-foreground">{p.brand}</p>
+                <thead>
+                  <tr className="border-b border-border bg-background">
+                    <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Product</th>
+                    <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Category</th>
+                    <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Count / Wt</th>
+                    <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Intake Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Price</th>
+                    <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.map((p) => {
+                    return (
+                      <tr key={p._id} className="border-b border-border last:border-0 hover:bg-background/50 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <ProductImage product={p} />
+                            <div>
+                              <p className="font-medium text-foreground">{p.name}</p>
+                              <p className="text-xs text-muted-foreground">{p.brand}</p>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getCatClass(p.category)}`}>
-                          {p.category}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">
-                        {p.pelletSize && <span>{p.pelletSize} · </span>}{p.weight}kg
-                      </td>
-                      <td className="px-4 py-3 font-display font-semibold text-foreground">
-                        ₹{p.price.toLocaleString("en-IN")}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          <span className={`font-semibold ${isCritical ? "text-destructive" : isLow ? "text-warning" : "text-foreground"}`}>
-                            {p.stock}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getCatClass(p.category)}`}>
+                            {p.category}
                           </span>
-                          {isCritical && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-destructive/10 text-destructive">Critical</span>
-                          )}
-                          {!isCritical && isLow && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-warning/10 text-warning">Low</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleEdit(p)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-brand hover:bg-brand-light transition-colors"
-                          >
-                            <Pencil className="w-3.5 h-3.5" /> Edit
-                          </button>
-                          <button
-                            onClick={() => { setSelectedProduct(p); setIsDeleteOpen(true); }}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" /> Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">
+                          {p.countSize || p.pelletSize || "-"} · {p.weight}kg
+                        </td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">
+                          {p.intakeDate ? new Date(p.intakeDate).toLocaleDateString("en-IN") : "-"}
+                        </td>
+                        <td className="px-4 py-3">
+                          ₹{(p.purchasePrice || p.price).toLocaleString("en-IN")}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleEdit(p)}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-brand hover:bg-brand-light transition-colors"
+                            >
+                              <Pencil className="w-3.5 h-3.5" /> Edit
+                            </button>
+                            <button
+                              onClick={() => { setSelectedProduct(p); setIsDeleteOpen(true); }}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
 
           {/* Pagination */}
           {totalPages > 1 && (
@@ -581,7 +565,7 @@ export default function Products() {
                 </button>
               </div>
             </div>
-            
+
             <div className="px-5 pt-4 pb-2 border-b border-border bg-muted/20">
               <label className="text-xs font-display font-semibold text-foreground mb-1.5 block">
                 Quick Fill
@@ -609,10 +593,10 @@ export default function Products() {
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <FormSelect
+                <FormInput
                   label="Count Size"
-                  options={["40 count", "60 count", "80 count", "100 count", "120 count", "Other"].map((c) => ({ value: c, label: c }))}
-                  name="countSize" control={controlAdd}
+                  placeholder="40 count"
+                  {...registerAdd("countSize")}
                 />
                 <FormNumber
                   label="Weight (kg)"
@@ -668,7 +652,7 @@ export default function Products() {
               <label className="text-xs font-display font-semibold text-foreground mb-1.5 block">
                 Update from Catalog
               </label>
-              <ProductSearchCombobox onSelect={handleCatalogSelect} />
+              <ProductSearchCombobox onSelect={handleCatalogSelectForEdit} />
             </div>
 
             <form onSubmit={handleEditSubmit(onEditSubmit)} className="p-5 space-y-4">
@@ -678,10 +662,10 @@ export default function Products() {
                 <FormInput type="date" label="Intake Date" {...registerEdit("intakeDate")} />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <FormSelect
+                <FormInput
                   label="Count Size"
-                  options={["40 count", "60 count", "80 count", "100 count", "120 count", "Other"].map((c) => ({ value: c, label: c }))}
-                  name="countSize" control={controlEdit}
+                  placeholder="40 count"
+                  {...registerEdit("countSize")}
                 />
                 <FormNumber label="Weight (kg)" {...registerEdit("weight", { required: "Required", min: { value: 0.1, message: "Must be > 0" } })} error={editErrors.weight} />
               </div>
