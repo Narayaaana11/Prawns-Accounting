@@ -112,19 +112,10 @@ export function TopNavbar({ title, subtitle }: TopNavbarProps) {
                           Currently {item.stock} bags remaining. Min threshold: {item.lowStockThreshold}.
                         </p>
                       </div>
-                    </Link>
+                    </div>
                   ))}
                 </div>
               )}
-            </div>
-            <div className="px-4 py-2 border-t border-border text-center bg-background">
-              <Link
-                to="/inventory"
-                onClick={() => setIsOpen(false)}
-                className="text-[11px] font-display font-semibold text-brand hover:text-brand/80"
-              >
-                Manage Stock levels
-              </Link>
             </div>
           </div>
         )}
