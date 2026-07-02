@@ -97,11 +97,9 @@ export function TopNavbar({ title, subtitle }: TopNavbarProps) {
               ) : (
                 <div className="divide-y divide-border">
                   {activeAlerts.map((item) => (
-                    <Link
+                    <div
                       key={item._id}
-                      to="/inventory"
-                      onClick={() => setIsOpen(false)}
-                      className="p-4 flex gap-3 hover:bg-secondary/40 transition-colors block"
+                      className="p-4 flex gap-3 transition-colors"
                     >
                       <div className="w-8 h-8 rounded-full bg-warning/10 flex items-center justify-center text-warning shrink-0">
                         <AlertTriangle className="w-4 h-4" />

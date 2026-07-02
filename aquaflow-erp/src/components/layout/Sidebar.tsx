@@ -22,14 +22,9 @@ const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/prawns-intake", label: "Prawns Intake", icon: Package },
   { to: "/freezing-batches", label: "Freezing Batches", icon: Snowflake },
-  { to: "/inventory", label: "Inventory", icon: Layers },
   { to: "/sales", label: "Sales", icon: ShoppingCart },
   { to: "/customers", label: "Customers", icon: Users },
   { to: "/expenses", label: "Expenses", icon: Receipt },
-  { to: "/warehouses", label: "Warehouses", icon: Warehouse },
-  { to: "/suppliers", label: "Suppliers", icon: Truck },
-  { to: "/purchase-orders", label: "Purchase Orders", icon: ShoppingBag },
-  { to: "/credit-notes", label: "Credit Notes", icon: RotateCcw },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
