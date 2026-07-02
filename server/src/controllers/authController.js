@@ -104,6 +104,7 @@ const login = async (req, res, next) => {
         invoicePrefix: user.company.invoicePrefix,
         address: user.company.address,
         phone: user.company.phone,
+        email: user.company.email,
         logoUrl: user.company.logoUrl,
       },
     };
