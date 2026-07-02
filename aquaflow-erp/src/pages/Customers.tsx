@@ -8,6 +8,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Search, Plus, Pencil, Trash2, Users, X, AlertTriangle, MessageCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { useAuth } from "@/hooks/useAuth";
 import { useCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, type Customer } from "@/hooks/useCustomers";
 import { useCustomers as useCustomersWebSocket } from "@/hooks/useModuleWebSocket";
 import { createPortal } from "react-dom";
@@ -28,6 +29,7 @@ interface CustomerFormData {
 }
 
 export default function Customers() {
+  const { user: currentUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("All");
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -221,8 +223,8 @@ export default function Customers() {
                   </div>
                   <div className="flex items-center gap-1">
                     {r.phone && r.outstandingBalance > 0 && (
-                      <button onClick={() => openWhatsApp(r.phone!, getReminderMessage(r.name, r.outstandingBalance))} className="w-8 h-8 flex items-center justify-center rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors">
-                        <MessageCircle className="w-3.5 h-3.5" />
+                      <button onClick={() => openWhatsApp(r.phone!, getReminderMessage(r.name, r.outstandingBalance, currentUser?.company?.name))} className="w-8 h-8 flex items-center justify-center rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors">
+                        <MessageCircle className="w-4 h-4" />
                       </button>
                     )}
                     <button onClick={() => handleEdit(r)} className="w-8 h-8 flex items-center justify-center rounded-lg text-brand hover:bg-brand-light transition-colors">
@@ -278,7 +280,7 @@ export default function Customers() {
               cell: (r) => (
                 <div className="flex items-center gap-2">
                   {r.phone && r.outstandingBalance > 0 && (
-                    <button onClick={() => openWhatsApp(r.phone!, getReminderMessage(r.name, r.outstandingBalance))} className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-emerald-600 hover:bg-emerald-50 transition-colors">
+                    <button onClick={() => openWhatsApp(r.phone!, getReminderMessage(r.name, r.outstandingBalance, currentUser?.company?.name))} className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-emerald-600 hover:bg-emerald-50 transition-colors">
                       <MessageCircle className="w-3.5 h-3.5" /> Reminder
                     </button>
                   )}

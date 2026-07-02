@@ -25,7 +25,7 @@ export const openWhatsApp = (phone: string, text: string) => {
   }
 };
 
-export const getInvoiceMessage = (invoice: any): string => {
+export const getInvoiceMessage = (invoice: any, companyName: string = "Our Company"): string => {
   const customerName = invoice.customerName || "Customer";
   const balanceAmount = invoice.total - (invoice.paidAmount || 0);
 
@@ -45,7 +45,7 @@ export const getInvoiceMessage = (invoice: any): string => {
 
   return `Dear ${customerName},
 
-Thank you for your business with AP Aquaculture!
+Thank you for your business with ${companyName}!
 Here are the details for your recent purchase:
 
 *Invoice No:* ${invoice.invoiceNumber}
@@ -57,12 +57,13 @@ ${balanceAmount > 0 ? `*Pending Balance:* ₹${balanceAmount.toLocaleString('en-
 If you have any questions, feel free to reply to this message.
 
 Best regards,
-AP Aquaculture Team`;
+${companyName} Team`;
 };
 
 export const getPaymentMessage = (
   invoice: any,
-  paymentAmount: number
+  paymentAmount: number,
+  companyName: string = "Our Company"
 ): string => {
   const customerName = invoice.customerName || "Customer";
   const newBalance = invoice.total - (invoice.paidAmount || 0);
@@ -84,21 +85,22 @@ ${paymentsText}
 Thank you for your prompt payment!
 
 Best regards,
-AP Aquaculture Team`;
+${companyName} Team`;
 };
 
 export const getReminderMessage = (
   customerName: string,
-  totalOutstandingBalance: number
+  totalOutstandingBalance: number,
+  companyName: string = "Our Company"
 ): string => {
   return `Dear ${customerName},
 
-This is a gentle reminder regarding your outstanding balance with AP Aquaculture.
+This is a gentle reminder regarding your outstanding balance with ${companyName}.
 
 *Total Outstanding Balance:* ₹${totalOutstandingBalance.toLocaleString('en-IN')}
 
 Kindly arrange for the payment at your earliest convenience. If you have already made the payment, please ignore this message.
 
 Thank you,
-AP Aquaculture Team`;
+${companyName} Team`;
 };

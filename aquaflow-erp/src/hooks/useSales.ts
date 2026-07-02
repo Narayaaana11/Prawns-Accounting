@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { openWhatsApp, getInvoiceMessage, getPaymentMessage } from '@/pages/utils/whatsapp';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface InvoiceItem {
   product: string;
@@ -64,6 +65,7 @@ export function useInvoice(id: string) {
 
 export function useCreateInvoice() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async (body: {
       customerId: string;
@@ -90,7 +92,7 @@ export function useCreateInvoice() {
         toast.success(`Invoice ${data.invoiceNumber} created!`, {
           action: {
             label: 'WhatsApp',
-            onClick: () => openWhatsApp(phone, getInvoiceMessage(data))
+            onClick: () => openWhatsApp(phone, getInvoiceMessage(data, user?.company?.name))
           },
           duration: 10000,
         });
@@ -134,6 +136,7 @@ export function useCancelInvoice() {
 
 export function useAddInvoicePayment() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: async ({ id, amount, paymentType }: { id: string; amount: number; paymentType: string }) => {
       const { data } = await api.post(`/sales/${id}/payments`, { amount, paymentType });
@@ -151,7 +154,7 @@ export function useAddInvoicePayment() {
         toast.success('Payment added successfully!', {
           action: {
             label: 'WhatsApp',
-            onClick: () => openWhatsApp(phone, getPaymentMessage(data, variables.amount))
+            onClick: () => openWhatsApp(phone, getPaymentMessage(data, variables.amount, user?.company?.name))
           },
           duration: 10000,
         });
