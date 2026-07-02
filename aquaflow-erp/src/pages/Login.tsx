@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AppLogo } from "@/components/AppLogo";
 
 interface LoginFormData {
-  email: string;
+  identifier: string;
   password: string;
 }
 
@@ -19,12 +19,12 @@ export default function Login() {
     formState: { errors },
   } = useForm<LoginFormData>({
     mode: "onBlur",
-    defaultValues: { email: "", password: "" },
+    defaultValues: { identifier: "", password: "" },
   });
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      await login(data.email, data.password);
+      await login(data.identifier, data.password);
     } catch {
       // error is handled by useAuth hook
     }
@@ -73,10 +73,10 @@ export default function Login() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
             <FormInput
-              label="Email address"
-              placeholder="you@company.com"
-              {...register("email", validationRules.email)}
-              error={errors.email}
+              label="Email or Phone Number"
+              placeholder="Enter your email or phone number"
+              {...register("identifier", validationRules.required)}
+              error={errors.identifier}
             />
 
             <div>

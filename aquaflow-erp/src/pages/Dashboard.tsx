@@ -150,41 +150,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Welcome / Empty Workspace Banner */}
-      {isEmptyWorkspace && (
-        <div className="bg-brand/10 border border-brand/20 rounded-xl p-5 mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex gap-3">
-            <div className="rounded-lg bg-white px-2 py-1.5 shrink-0 border border-brand/10">
-              <AppLogo size="xs" />
-            </div>
-            <div>
-              <h3 className="font-display font-bold text-foreground text-sm">
-                Welcome to Prawns Accounting!
-              </h3>
-              <p className="text-xs text-muted-foreground mt-0.5 max-w-xl">
-                Get started by adding products and customers, or populate your workspace with sample
-                demo data (invoices, expenses, stock records) to see how the reports and analytics
-                look in production.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => loadDemoMutation.mutate()}
-            disabled={loadDemoMutation.isPending}
-            className="h-9 px-4 rounded-lg bg-brand text-white text-xs font-display font-semibold hover:bg-brand/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 shrink-0 shadow-sm"
-          >
-            {loadDemoMutation.isPending ? (
-              <>
-                <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                <span>Loading Demo...</span>
-              </>
-            ) : (
-              "Load Demo Data"
-            )}
-          </button>
-        </div>
-      )}
-
       {/* Date Filter + Refresh */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="flex items-center gap-2 h-9 px-3 rounded-lg border border-border bg-surface text-sm text-foreground">

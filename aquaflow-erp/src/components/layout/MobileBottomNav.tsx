@@ -33,7 +33,6 @@ const moreNav = [
   { to: "/suppliers", label: "Suppliers", icon: Truck },
   { to: "/purchase-orders", label: "Purchase Orders", icon: ShoppingBag },
   { to: "/credit-notes", label: "Credit Notes", icon: RotateCcw },
-  { to: "/reports", label: "Reports", icon: BarChart2 },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 

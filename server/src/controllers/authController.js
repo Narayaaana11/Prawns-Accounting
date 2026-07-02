@@ -72,13 +72,15 @@ const register = async (req, res, next) => {
 // POST /api/auth/login
 const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email: identifier, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Email and password are required.' });
+    if (!identifier || !password) {
+      return res.status(400).json({ success: false, message: 'Email/Phone and password are required.' });
     }
 
-    const user = await User.findOne({ email }).select('+password').populate('company');
+    const user = await User.findOne({
+      $or: [{ email: identifier.toLowerCase() }, { phone: identifier }]
+    }).select('+password').populate('company');
     if (!user || !user.isActive) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }

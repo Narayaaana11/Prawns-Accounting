@@ -10,17 +10,11 @@ import Register from "./pages/Register.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import PrawnsIntake from "./pages/PrawnsIntake.tsx";
 import FreezingBatches from "./pages/FreezingBatches.tsx";
-import Inventory from "./pages/Inventory.tsx";
-import Warehouses from "./pages/Warehouses.tsx";
 import Sales from "./pages/Sales.tsx";
 import Customers from "./pages/Customers.tsx";
 import Expenses from "./pages/Expenses.tsx";
-import Reports from "./pages/Reports.tsx";
 import Settings from "./pages/Settings.tsx";
-import Suppliers from "./pages/Suppliers.tsx";
-import PurchaseOrders from "./pages/PurchaseOrders.tsx";
 import InvoicePrint from "./pages/InvoicePrint.tsx";
-import CreditNotes from "./pages/CreditNotes.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { WebSocketProvider } from "@/hooks/useWebSocketContext";
 import { AppLogo } from "@/components/AppLogo";
@@ -125,17 +119,11 @@ const App = () => {
               <Route path="/" element={<Dashboard />} />
               <Route path="/prawns-intake" element={<PrawnsIntake />} />
               <Route path="/freezing-batches" element={<FreezingBatches />} />
-              <Route path="/inventory" element={<Inventory />} />
-              <Route path="/warehouses" element={<Warehouses />} />
               <Route path="/sales" element={<Sales />} />
               <Route path="/sales/:id/print" element={<InvoicePrint />} />
               <Route path="/customers" element={<Customers />} />
               <Route path="/expenses" element={<Expenses />} />
-              <Route path="/reports" element={<Reports />} />
               <Route path="/settings" element={<Settings />} />
-              <Route path="/suppliers" element={<Suppliers />} />
-              <Route path="/purchase-orders" element={<PurchaseOrders />} />
-              <Route path="/credit-notes" element={<CreditNotes />} />
             </Route>
 
             {/* Catch-all */}
