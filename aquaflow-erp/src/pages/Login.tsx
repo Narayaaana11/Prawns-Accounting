@@ -4,6 +4,17 @@ import { FormInput } from "@/components/forms";
 import { validationRules } from "@/lib/validations";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLogo } from "@/components/AppLogo";
+import { Helmet } from "react-helmet-async";
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Prawns Accounting",
+  "applicationCategory": "BusinessApplication",
+  "description": "Comprehensive enterprise resource planning (ERP) and accounting software for aquaculture and prawn trading businesses.",
+  "operatingSystem": "Web",
+  "url": "https://prawns-accounting.vercel.app/login"
+};
 
 interface LoginFormData {
   identifier: string;
@@ -31,6 +42,16 @@ export default function Login() {
   };
 
   return (
+    <>
+      <Helmet>
+        <title>Login | Prawns Accounting</title>
+        <meta name="description" content="Sign in to Prawns Accounting to manage your aquaculture inventory, sales, expenses, and customers." />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://prawns-accounting.vercel.app/login" />
+        <script type="application/ld+json">
+          {JSON.stringify(structuredData)}
+        </script>
+      </Helmet>
     <div className="min-h-screen bg-background flex">
       {/* Left brand panel */}
       <div className="hidden lg:flex lg:w-1/2 brand-gradient flex-col justify-between p-12">
@@ -108,8 +129,15 @@ export default function Login() {
               )}
             </button>
           </form>
+          
+          <div className="mt-8 pt-6 border-t border-border">
+            <p className="text-center text-xs text-muted-foreground">
+              developed by IndentDev 6301253789
+            </p>
+          </div>
         </div>
       </div>
     </div>
+    </>
   );
 }

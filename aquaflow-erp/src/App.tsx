@@ -3,17 +3,20 @@ import { BrowserRouter, Route, Routes, Navigate, Outlet } from "react-router-dom
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useState, useEffect } from "react";
-import Login from "./pages/Login.tsx";
-import Dashboard from "./pages/Dashboard.tsx";
-import PrawnsIntake from "./pages/PrawnsIntake.tsx";
-import FreezingBatches from "./pages/FreezingBatches.tsx";
-import Sales from "./pages/Sales.tsx";
-import Customers from "./pages/Customers.tsx";
-import Expenses from "./pages/Expenses.tsx";
-import Settings from "./pages/Settings.tsx";
-import InvoicePrint from "./pages/InvoicePrint.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import { useState, useEffect, Suspense, lazy } from "react";
+import { HelmetProvider, Helmet } from "react-helmet-async";
+
+const Login = lazy(() => import("./pages/Login.tsx"));
+const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
+const PrawnsIntake = lazy(() => import("./pages/PrawnsIntake.tsx"));
+const FreezingBatches = lazy(() => import("./pages/FreezingBatches.tsx"));
+const Sales = lazy(() => import("./pages/Sales.tsx"));
+const Customers = lazy(() => import("./pages/Customers.tsx"));
+const Expenses = lazy(() => import("./pages/Expenses.tsx"));
+const Settings = lazy(() => import("./pages/Settings.tsx"));
+const InvoicePrint = lazy(() => import("./pages/InvoicePrint.tsx"));
+const NotFound = lazy(() => import("./pages/NotFound.tsx"));
+
 import { WebSocketProvider } from "@/hooks/useWebSocketContext";
 import { AppLogo } from "@/components/AppLogo";
 import api from "@/lib/api";
@@ -52,6 +55,9 @@ const ProtectedLayout = () => {
 
   return isTokenValid() ? (
     <WebSocketProvider>
+      <Helmet>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <Outlet />
     </WebSocketProvider>
   ) : (
@@ -106,27 +112,31 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <Routes>
-            {/* Auth Routes (public) */}
-            <Route path="/login" element={<Login />} />
+        <HelmetProvider>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <Suspense fallback={<div className="flex h-screen items-center justify-center text-sm text-muted-foreground">Loading...</div>}>
+              <Routes>
+                {/* Auth Routes (public) */}
+                <Route path="/login" element={<Login />} />
 
-            {/* Protected App Routes */}
-            <Route element={<ProtectedLayout />}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/prawns-intake" element={<PrawnsIntake />} />
-              <Route path="/freezing-batches" element={<FreezingBatches />} />
-              <Route path="/sales" element={<Sales />} />
-              <Route path="/sales/:id/print" element={<InvoicePrint />} />
-              <Route path="/customers" element={<Customers />} />
-              <Route path="/expenses" element={<Expenses />} />
-              <Route path="/settings" element={<Settings />} />
-            </Route>
+                {/* Protected App Routes */}
+                <Route element={<ProtectedLayout />}>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/prawns-intake" element={<PrawnsIntake />} />
+                  <Route path="/freezing-batches" element={<FreezingBatches />} />
+                  <Route path="/sales" element={<Sales />} />
+                  <Route path="/sales/:id/print" element={<InvoicePrint />} />
+                  <Route path="/customers" element={<Customers />} />
+                  <Route path="/expenses" element={<Expenses />} />
+                  <Route path="/settings" element={<Settings />} />
+                </Route>
 
-            {/* Catch-all */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+                {/* Catch-all */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </HelmetProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
