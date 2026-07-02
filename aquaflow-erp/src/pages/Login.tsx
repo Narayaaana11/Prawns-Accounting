@@ -65,12 +65,6 @@ export default function Login() {
               <p className="text-sm font-medium text-destructive">{error}</p>
             </div>
           )}
-
-          <div className="mt-3 p-3 rounded-lg bg-brand/10 border border-brand/20">
-            <p className="text-xs text-brand font-medium">Demo credentials:</p>
-            <p className="text-xs text-muted-foreground">admin@aquafarm.co / admin123</p>
-          </div>
-
           <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
             <FormInput
               label="Email or Phone Number"
@@ -114,13 +108,6 @@ export default function Login() {
               )}
             </button>
           </form>
-
-          <p className="mt-6 text-sm text-muted-foreground text-center">
-            Don't have an account?{" "}
-            <Link to="/register" className="text-brand font-medium hover:underline">
-              Create workspace
-            </Link>
-          </p>
         </div>
       </div>
     </div>
