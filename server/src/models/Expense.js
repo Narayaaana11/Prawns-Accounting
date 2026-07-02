@@ -54,10 +54,6 @@ const expenseSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
-    warehouse: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Warehouse',
-    },
     company: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Company',

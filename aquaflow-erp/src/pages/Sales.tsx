@@ -13,7 +13,6 @@ import { useSales, useCreateInvoice, useUpdateInvoiceStatus, useAddInvoicePaymen
 import { useCreateCreditNote } from "@/hooks/useCreditNotes";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useProducts } from "@/hooks/useProducts";
-import { useWarehouses } from "@/hooks/useWarehouses";
 import { useFreezingBatches, type FreezingBatch } from "@/hooks/useFreezingBatches";
 import { useSales as useSalesWebSocket } from "@/hooks/useModuleWebSocket";
 import { toast } from "sonner";
@@ -25,7 +24,6 @@ interface CreateInvoiceFormData {
   paymentType: string;
   notes: string;
   paidAmount?: number;
-  warehouseId?: string;
   items: { productId: string; quantity: number; unitPrice: number; freezingBatchId?: string }[];
 }
 
@@ -70,7 +68,6 @@ export default function Sales() {
 
   const { data: customers = [] } = useCustomers();
   const { data: products = [] } = useProducts();
-  const { data: warehouses = [] } = useWarehouses();
   const { data: batchesData } = useFreezingBatches({ status: "frozen,packed,partial" });
   const availableBatches = batchesData?.data || [];
 
@@ -89,15 +86,6 @@ export default function Sales() {
         items: [{ productId: "", quantity: 1, unitPrice: 0, freezingBatchId: "" }],
       },
     });
-
-  useEffect(() => {
-    if (warehouses.length > 0) {
-      const defaultWh = warehouses.find((w) => w.isDefault) || warehouses[0];
-      if (defaultWh) {
-        setValue("warehouseId", defaultWh._id);
-      }
-    }
-  }, [warehouses, setValue]);
 
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
 
@@ -126,7 +114,6 @@ export default function Sales() {
         paymentType: data.paymentType,
         notes: data.notes,
         paidAmount: data.paymentType === 'Split' ? data.paidAmount : undefined,
-        warehouseId: data.warehouseId,
         items: validItems.map((i) => ({
           productId: i.productId,
           quantity: i.quantity,
@@ -462,12 +449,7 @@ export default function Sales() {
                   name="paymentType" control={control} 
                 />
                 <div className="col-span-2">
-                  <FormSelect
-                    label="Dispatch Warehouse *"
-                    options={warehouses.map((w) => ({ value: w._id, label: w.name }))}
-                    name="warehouseId" control={control} required
-                    error={errors.warehouseId}
-                  />
+
                 </div>
               </div>
 

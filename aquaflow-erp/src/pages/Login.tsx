@@ -65,7 +65,7 @@ export default function Login() {
           <h2 className="font-display text-4xl font-bold text-white leading-tight">
             Manage your entire aquaculture business from one place.
           </h2>
-          <p className="mt-4 text-white/70 text-lg">Inventory · Sales · Billing · Reports · Multi-warehouse</p>
+          <p className="mt-4 text-white/70 text-lg">Inventory · Sales · Billing · Reports · </p>
         </div>
         <p className="text-white/50 text-sm">© 2026 Prawns Accounting. All rights reserved.</p>
       </div>

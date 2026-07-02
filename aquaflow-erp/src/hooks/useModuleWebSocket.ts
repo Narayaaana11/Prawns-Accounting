@@ -112,6 +112,12 @@ export function useInventory(onStockAdjustment?: (adjustment: any) => void, onLo
                 onStockAdjustment?.(adjustment);
             };
 
+            const handleInventoryUpdate = (data: any) => {
+                devLog('🔄 Inventory update:', data);
+                setInventoryUpdates({ type: 'update', ...data });
+                onStockAdjustment?.(data); // Re-use the stock adjustment callback to trigger refresh
+            };
+
             const handleLowStockAlert = (data: any) => {
                 devLog('⚠️ Low stock alert:', data);
                 setInventoryUpdates({ type: 'low_stock', products: data.products });
@@ -120,10 +126,12 @@ export function useInventory(onStockAdjustment?: (adjustment: any) => void, onLo
 
             on('stock_adjustment', handleStockAdjustment);
             on('low_stock_alert', handleLowStockAlert);
+            on('inventory_update', handleInventoryUpdate);
 
             return () => {
                 off('stock_adjustment');
                 off('low_stock_alert');
+                off('inventory_update');
             };
         }
     }, [isConnected, subscribe, on, off, onStockAdjustment, onLowStockAlert]);

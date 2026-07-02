@@ -59,11 +59,6 @@ const purchaseOrderSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    warehouse: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Warehouse',
-      required: true,
-    },
     receivedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

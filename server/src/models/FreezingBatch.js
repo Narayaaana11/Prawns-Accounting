@@ -25,11 +25,6 @@ const freezingBatchSchema = new mongoose.Schema(
       trim: true,
       enum: ['40 count', '60 count', '80 count', '100 count', '120 count', 'Other'],
     },
-    warehouse: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Warehouse',
-      required: true,
-    },
     location: {
       type: String,
       trim: true,

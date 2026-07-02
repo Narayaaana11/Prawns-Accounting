@@ -12,6 +12,7 @@ const PrawnsIntake = lazy(() => import("./pages/PrawnsIntake.tsx"));
 const FreezingBatches = lazy(() => import("./pages/FreezingBatches.tsx"));
 const Sales = lazy(() => import("./pages/Sales.tsx"));
 const Customers = lazy(() => import("./pages/Customers.tsx"));
+const Farmers = lazy(() => import("./pages/Farmers.tsx"));
 const Expenses = lazy(() => import("./pages/Expenses.tsx"));
 const Settings = lazy(() => import("./pages/Settings.tsx"));
 const InvoicePrint = lazy(() => import("./pages/InvoicePrint.tsx"));
@@ -127,6 +128,7 @@ const App = () => {
                   <Route path="/sales" element={<Sales />} />
                   <Route path="/sales/:id/print" element={<InvoicePrint />} />
                   <Route path="/customers" element={<Customers />} />
+                  <Route path="/farmers" element={<Farmers />} />
                   <Route path="/expenses" element={<Expenses />} />
                   <Route path="/settings" element={<Settings />} />
                 </Route>

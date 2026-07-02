@@ -2,8 +2,6 @@ const mongoose = require('mongoose');
 const PurchaseOrder = require('../models/PurchaseOrder');
 const Supplier = require('../models/Supplier');
 const Product = require('../models/Product');
-const Warehouse = require('../models/Warehouse');
-const Inventory = require('../models/Inventory');
 const StockAdjustment = require('../models/StockAdjustment');
 const Company = require('../models/Company');
 
@@ -31,7 +29,6 @@ const getPOs = async (req, res, next) => {
     const [pos, total] = await Promise.all([
       PurchaseOrder.find(query)
         .populate('supplier', 'name phone')
-        .populate('warehouse', 'name')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
@@ -49,7 +46,6 @@ const getPO = async (req, res, next) => {
   try {
     const po = await PurchaseOrder.findOne({ _id: req.params.id, company: req.companyId })
       .populate('supplier')
-      .populate('warehouse', 'name')
       .populate('items.product', 'name brand')
       .populate('createdBy', 'name')
       .populate('receivedBy', 'name');
@@ -65,32 +61,13 @@ const createPO = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { supplierId, warehouseId, items, expectedDate, notes } = req.body;
+    const { supplierId, items, expectedDate, notes } = req.body;
 
     const supplier = await Supplier.findOne({ _id: supplierId, company: req.companyId }).session(session);
     if (!supplier) {
       await session.abortTransaction();
       session.endSession();
       return res.status(404).json({ success: false, message: 'Supplier not found.' });
-    }
-
-    // Resolve warehouse
-    let targetWarehouseId = warehouseId;
-    if (!targetWarehouseId) {
-      const defaultWh = await Warehouse.findOne({ company: req.companyId, isDefault: true }).session(session);
-      if (!defaultWh) {
-        await session.abortTransaction();
-        session.endSession();
-        return res.status(400).json({ success: false, message: 'No default warehouse configured.' });
-      }
-      targetWarehouseId = defaultWh._id;
-    }
-
-    const warehouse = await Warehouse.findOne({ _id: targetWarehouseId, company: req.companyId }).session(session);
-    if (!warehouse) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ success: false, message: 'Warehouse not found.' });
     }
 
     // Build line items
@@ -127,7 +104,6 @@ const createPO = async (req, res, next) => {
       status: 'Ordered',
       expectedDate: expectedDate ? new Date(expectedDate) : undefined,
       notes,
-      warehouse: targetWarehouseId,
       createdBy: req.user._id,
       company: req.companyId,
     }], { session });
@@ -136,8 +112,7 @@ const createPO = async (req, res, next) => {
     session.endSession();
 
     const populated = await PurchaseOrder.findById(po._id)
-      .populate('supplier', 'name phone')
-      .populate('warehouse', 'name');
+      .populate('supplier', 'name phone');
 
     // WebSocket notification
     const io = req.app.locals.io;
@@ -182,25 +157,6 @@ const receivePO = async (req, res, next) => {
 
       const prevStock = product.stock;
 
-      // Update / create warehouse inventory record
-      let invRecord = await Inventory.findOne({
-        product: product._id,
-        warehouse: po.warehouse,
-        company: req.companyId,
-      }).session(session);
-
-      if (invRecord) {
-        invRecord.quantity += item.quantity;
-        await invRecord.save({ session });
-      } else {
-        await Inventory.create([{
-          product: product._id,
-          warehouse: po.warehouse,
-          quantity: item.quantity,
-          company: req.companyId,
-        }], { session });
-      }
-
       // Update global product stock
       product.stock += item.quantity;
       // Update purchase price from PO if unitCost provided
@@ -212,7 +168,6 @@ const receivePO = async (req, res, next) => {
       // Log stock adjustment
       await StockAdjustment.create([{
         product: product._id,
-        warehouse: po.warehouse,
         type: 'purchase',
         quantity: item.quantity,
         previousStock: prevStock,
@@ -233,8 +188,7 @@ const receivePO = async (req, res, next) => {
     session.endSession();
 
     const populated = await PurchaseOrder.findById(po._id)
-      .populate('supplier', 'name phone')
-      .populate('warehouse', 'name');
+      .populate('supplier', 'name phone');
 
     // WebSocket
     const io = req.app.locals.io;

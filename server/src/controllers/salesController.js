@@ -4,8 +4,6 @@ const Product = require('../models/Product');
 const Customer = require('../models/Customer');
 const Company = require('../models/Company');
 const StockAdjustment = require('../models/StockAdjustment');
-const Warehouse = require('../models/Warehouse');
-const Inventory = require('../models/Inventory');
 const FreezingBatch = require('../models/FreezingBatch');
 const { emitInvoiceCreated, emitInvoiceUpdated, emitInvoiceDeleted, emitInvoicePaid, emitDashboardUpdate, emitLowStockAlert } = require('../utils/websocket');
 
@@ -73,7 +71,7 @@ const createInvoice = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { customerId, items, paymentType, notes, gstRate, paidAmount, warehouseId } = req.body;
+    const { customerId, items, paymentType, notes, gstRate, paidAmount } = req.body;
 
     const customer = await Customer.findOne({ _id: customerId, company: req.companyId }).session(session);
     if (!customer) {
@@ -84,25 +82,6 @@ const createInvoice = async (req, res, next) => {
 
     const company = await Company.findById(req.companyId).session(session);
     const invoiceGstRate = gstRate ?? company.gstRate ?? 5;
-
-    // Find warehouse
-    let targetWarehouseId = warehouseId;
-    if (!targetWarehouseId) {
-      const defaultWh = await Warehouse.findOne({ company: req.companyId, isDefault: true }).session(session);
-      if (!defaultWh) {
-        await session.abortTransaction();
-        session.endSession();
-        return res.status(400).json({ success: false, message: 'No default warehouse configured for this company.' });
-      }
-      targetWarehouseId = defaultWh._id;
-    }
-
-    const warehouseObj = await Warehouse.findOne({ _id: targetWarehouseId, company: req.companyId }).session(session);
-    if (!warehouseObj) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ success: false, message: 'Warehouse not found.' });
-    }
 
     // Build line items with stock check
     let subtotal = 0;
@@ -116,21 +95,12 @@ const createInvoice = async (req, res, next) => {
         return res.status(404).json({ success: false, message: `Product not found: ${item.productId}` });
       }
 
-      // Check stock inside the selected warehouse
-      const invRecord = await Inventory.findOne({
-        product: product._id,
-        warehouse: targetWarehouseId,
-        company: req.companyId,
-      }).session(session);
-
-      const availableStock = invRecord ? invRecord.quantity : 0;
-
-      if (availableStock < item.quantity) {
+      if (product.stock < item.quantity) {
         await session.abortTransaction();
         session.endSession();
         return res.status(400).json({
           success: false,
-          message: `Insufficient stock for "${product.name}" in warehouse "${warehouseObj.name}". Available: ${availableStock}, Requested: ${item.quantity}`,
+          message: `Insufficient stock for "${product.name}". Available: ${product.stock}, Requested: ${item.quantity}`,
         });
       }
 
@@ -230,16 +200,6 @@ const createInvoice = async (req, res, next) => {
       const product = await Product.findById(item.productId).session(session);
       const prevStock = product.stock;
 
-      // Deduct from warehouse inventory
-      const invRecord = await Inventory.findOne({
-        product: product._id,
-        warehouse: targetWarehouseId,
-        company: req.companyId,
-      }).session(session);
-
-      invRecord.quantity -= item.quantity;
-      await invRecord.save({ session });
-
       // Deduct from global stock
       product.stock -= item.quantity;
       await product.save({ session });
@@ -261,7 +221,6 @@ const createInvoice = async (req, res, next) => {
 
       await StockAdjustment.create([{
         product: product._id,
-        warehouse: targetWarehouseId,
         type: 'sale',
         quantity: item.quantity,
         previousStock: prevStock,
@@ -427,8 +386,7 @@ const updateInvoice = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Cannot edit a Paid or Cancelled invoice.' });
     }
 
-    const { items, notes, paymentType, gstRate, warehouseId } = req.body;
-    const targetWarehouseId = warehouseId || invoice.warehouse;
+    const { items, notes, paymentType, gstRate } = req.body;
 
     // 1. Restore stock from old line items
     for (const oldItem of invoice.items) {
@@ -437,16 +395,6 @@ const updateInvoice = async (req, res, next) => {
 
       product.stock += oldItem.quantity;
       await product.save({ session });
-
-      const invRecord = await Inventory.findOne({
-        product: product._id,
-        warehouse: targetWarehouseId,
-        company: req.companyId,
-      }).session(session);
-      if (invRecord) {
-        invRecord.quantity += oldItem.quantity;
-        await invRecord.save({ session });
-      }
 
       // Restore freezing batch stock if applicable
       if (oldItem.freezingBatch) {
@@ -475,19 +423,12 @@ const updateInvoice = async (req, res, next) => {
         return res.status(404).json({ success: false, message: `Product not found: ${item.productId}` });
       }
 
-      const invRecord = await Inventory.findOne({
-        product: product._id,
-        warehouse: targetWarehouseId,
-        company: req.companyId,
-      }).session(session);
-
-      const availableStock = invRecord ? invRecord.quantity : 0;
-      if (availableStock < item.quantity) {
+      if (product.stock < item.quantity) {
         await session.abortTransaction();
         session.endSession();
         return res.status(400).json({
           success: false,
-          message: `Insufficient stock for "${product.name}". Available: ${availableStock}, Requested: ${item.quantity}`,
+          message: `Insufficient stock for "${product.name}". Available: ${product.stock}, Requested: ${item.quantity}`,
         });
       }
 
@@ -533,14 +474,7 @@ const updateInvoice = async (req, res, next) => {
     // 3. Deduct stock for new line items
     for (const item of items) {
       const product = await Product.findById(item.productId).session(session);
-      const invRecord = await Inventory.findOne({
-        product: product._id,
-        warehouse: targetWarehouseId,
-        company: req.companyId,
-      }).session(session);
 
-      invRecord.quantity -= item.quantity;
-      await invRecord.save({ session });
       product.stock -= item.quantity;
       await product.save({ session });
 
@@ -561,7 +495,6 @@ const updateInvoice = async (req, res, next) => {
 
       await StockAdjustment.create([{
         product: product._id,
-        warehouse: targetWarehouseId,
         type: 'sale',
         quantity: item.quantity,
         previousStock: product.stock + item.quantity,
@@ -579,7 +512,6 @@ const updateInvoice = async (req, res, next) => {
     invoice.gstRate = invoiceGstRate;
     invoice.gstAmount = gstAmount;
     invoice.total = total;
-    invoice.warehouse = targetWarehouseId;
     if (notes !== undefined) invoice.notes = notes;
     if (paymentType) invoice.paymentType = paymentType;
 
@@ -601,4 +533,3 @@ const updateInvoice = async (req, res, next) => {
 };
 
 module.exports = { getInvoices, getInvoice, createInvoice, updateInvoice, updateInvoiceStatus, deleteInvoice, addPayment };
-

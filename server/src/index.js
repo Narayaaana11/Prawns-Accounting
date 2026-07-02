@@ -23,7 +23,6 @@ const productRoutes = require('./routes/products');
 const customerRoutes = require('./routes/customers');
 const salesRoutes = require('./routes/sales');
 const expenseRoutes = require('./routes/expenses');
-const warehouseRoutes = require('./routes/warehouses');
 const inventoryRoutes = require('./routes/inventory');
 const reportsRoutes = require('./routes/reports');
 const settingsRoutes = require('./routes/settings');
@@ -31,6 +30,7 @@ const supplierRoutes = require('./routes/suppliers');
 const purchaseOrderRoutes = require('./routes/purchaseOrders');
 const creditNoteRoutes = require('./routes/creditNotes');
 const freezingBatchRoutes = require('./routes/freezingBatches');
+const intakeRoutes = require('./routes/intake');
 
 const app = express();
 const server = http.createServer(app);
@@ -170,16 +170,6 @@ io.on('connection', (socket) => {
     socket.leave(`expenses_${socket.companyId}`);
   });
 
-  // Warehouses subscriptions
-  socket.on('subscribe_warehouses', () => {
-    socket.join(`warehouses_${socket.companyId}`);
-    console.log(`🏢 User ${socket.userId} subscribed to warehouse updates`);
-  });
-
-  socket.on('unsubscribe_warehouses', () => {
-    socket.leave(`warehouses_${socket.companyId}`);
-  });
-
   // Settings subscriptions
   socket.on('subscribe_settings', () => {
     socket.join(`settings_${socket.companyId}`);
@@ -256,7 +246,6 @@ app.use('/api/products', productRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/expenses', expenseRoutes);
-app.use('/api/warehouses', warehouseRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/settings', settingsRoutes);
@@ -264,6 +253,7 @@ app.use('/api/suppliers', supplierRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
 app.use('/api/credit-notes', creditNoteRoutes);
 app.use('/api/freezing-batches', freezingBatchRoutes);
+app.use('/api/intake', intakeRoutes);
 
 // Serve React frontend only if the dist folder exists (self-hosted / same-server deploy).
 // When frontend is on Vercel and backend is on Render, dist won't exist — skip silently.

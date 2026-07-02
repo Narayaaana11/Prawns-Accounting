@@ -77,15 +77,6 @@ function emitExpenseDeleted(io, companyId, expenseId) {
     io.to(`expenses_${companyId}`).emit('expense_deleted', { expenseId });
 }
 
-// Warehouse Events
-function emitWarehouseUpdate(io, companyId, warehouse) {
-    io.to(`warehouses_${companyId}`).emit('warehouse_update', warehouse);
-}
-
-function emitWarehouseCreated(io, companyId, warehouse) {
-    io.to(`warehouses_${companyId}`).emit('warehouse_created', warehouse);
-}
-
 // Settings Events
 function emitSettingsUpdate(io, companyId, settings) {
     io.to(`settings_${companyId}`).emit('settings_update', settings);
@@ -114,8 +105,6 @@ module.exports = {
     emitExpenseCreated,
     emitExpenseUpdated,
     emitExpenseDeleted,
-    emitWarehouseUpdate,
-    emitWarehouseCreated,
     emitSettingsUpdate,
     broadcastToCompany,
 };

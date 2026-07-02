@@ -100,10 +100,6 @@ const invoiceSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    warehouse: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Warehouse',
-    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

@@ -6,13 +6,8 @@ export interface FreezingBatch {
   _id: string;
   batchNumber: string;
   dateFrozen: string;
-  datePacked?: string;
   quantityKgs: number;
   countSize: string;
-  warehouse: {
-    _id: string;
-    name: string;
-  };
   location?: string;
   status: 'frozen' | 'packed' | 'partial' | 'exhausted';
   remainingKgs: number;

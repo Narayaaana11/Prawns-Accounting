@@ -8,7 +8,6 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
 import { useFreezingBatches, useCreateFreezingBatch, useUpdateFreezingBatch, useDeleteFreezingBatch, type FreezingBatch } from "@/hooks/useFreezingBatches";
-import { useWarehouses } from "@/hooks/useWarehouses";
 import { cn } from "@/lib/utils";
 
 interface BatchFormData {
@@ -16,7 +15,6 @@ interface BatchFormData {
   datePacked: string;
   quantityKgs: number;
   countSize: string;
-  warehouseId: string;
   location: string;
   notes: string;
 }
@@ -52,7 +50,6 @@ export default function FreezingBatches() {
   });
   const batches = batchesData?.data || [];
 
-  const { data: warehouses = [] } = useWarehouses();
 
   const createBatch = useCreateFreezingBatch();
   const updateBatch = useUpdateFreezingBatch();
@@ -87,7 +84,6 @@ export default function FreezingBatches() {
       datePacked: batch.datePacked ? new Date(batch.datePacked).toISOString().split('T')[0] : "",
       quantityKgs: batch.quantityKgs,
       countSize: batch.countSize,
-      warehouseId: batch.warehouse._id,
       location: batch.location || "",
       notes: batch.notes || "",
     });
@@ -199,10 +195,7 @@ export default function FreezingBatches() {
                     {r.remainingKgs} kg
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Warehouse</span>
-                  <span className="font-medium text-foreground">{r.warehouse.name}</span>
-                </div>
+
               </div>
             </div>
           )}
@@ -234,17 +227,6 @@ export default function FreezingBatches() {
                 <div>
                   <p className="font-display font-semibold text-foreground">{r.quantityKgs} kg</p>
                   <p className="text-xs text-muted-foreground">{r.remainingKgs} kg remaining</p>
-                </div>
-              ),
-            },
-            {
-              key: "warehouse",
-              header: "Warehouse",
-              cell: (r) => (
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-sm text-foreground">{r.warehouse.name}</span>
-                  {r.location && <span className="text-xs text-muted-foreground">({r.location})</span>}
                 </div>
               ),
             },
@@ -312,12 +294,7 @@ export default function FreezingBatches() {
                   error={errors.quantityKgs}
                 />
               </div>
-              <FormSelect
-                label="Warehouse *"
-                options={warehouses.map((w) => ({ value: w._id, label: w.name }))}
-                name="warehouseId" control={control} required
-                error={errors.warehouseId}
-              />
+
               <FormInput
                 label="Location"
                 placeholder="e.g., Shelf A1, Freezer 2"

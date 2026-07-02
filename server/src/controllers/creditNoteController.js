@@ -2,11 +2,8 @@ const mongoose = require('mongoose');
 const Invoice = require('../models/Invoice');
 const Product = require('../models/Product');
 const Customer = require('../models/Customer');
-const Inventory = require('../models/Inventory');
 const StockAdjustment = require('../models/StockAdjustment');
 const CreditNote = require('../models/CreditNote');
-const Warehouse = require('../models/Warehouse');
-
 // Auto-generate credit note number
 const generateCNNumber = async (companyId, session) => {
   const count = await CreditNote.countDocuments({ company: companyId }).session(session);
@@ -34,8 +31,6 @@ const createCreditNote = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Cannot create a credit note for a cancelled invoice.' });
     }
 
-    // Resolve warehouse from original invoice
-    const warehouseId = invoice.warehouse;
 
     // Build credit note items with stock validation
     let totalAmount = 0;
@@ -85,7 +80,6 @@ const createCreditNote = async (req, res, next) => {
       items: cnItems,
       reason: reason || 'Product return',
       totalAmount,
-      warehouse: warehouseId,
       createdBy: req.user._id,
       company: req.companyId,
     }], { session });
@@ -97,34 +91,12 @@ const createCreditNote = async (req, res, next) => {
 
       const prevStock = product.stock;
 
-      // Add to warehouse inventory
-      if (warehouseId) {
-        let invRecord = await Inventory.findOne({
-          product: product._id,
-          warehouse: warehouseId,
-          company: req.companyId,
-        }).session(session);
-
-        if (invRecord) {
-          invRecord.quantity += item.quantity;
-          await invRecord.save({ session });
-        } else {
-          await Inventory.create([{
-            product: product._id,
-            warehouse: warehouseId,
-            quantity: item.quantity,
-            company: req.companyId,
-          }], { session });
-        }
-      }
-
       // Add to global stock
       product.stock += item.quantity;
       await product.save({ session });
 
       await StockAdjustment.create([{
         product: product._id,
-        warehouse: warehouseId,
         type: 'return',
         quantity: item.quantity,
         previousStock: prevStock,

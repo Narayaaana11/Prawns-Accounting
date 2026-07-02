@@ -22,7 +22,6 @@ export interface PurchaseOrder {
   expectedDate?: string;
   receivedDate?: string;
   notes?: string;
-  warehouse: { _id: string; name: string };
   createdAt: string;
 }
 
@@ -42,7 +41,6 @@ export function useCreatePO() {
   return useMutation({
     mutationFn: async (body: {
       supplierId: string;
-      warehouseId?: string;
       items: { productId: string; quantity: number; unitCost: number }[];
       expectedDate?: string;
       notes?: string;

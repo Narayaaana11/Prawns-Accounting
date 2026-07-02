@@ -4,8 +4,7 @@ const Product = require('../models/Product');
 const Customer = require('../models/Customer');
 const Invoice = require('../models/Invoice');
 const Expense = require('../models/Expense');
-const Warehouse = require('../models/Warehouse');
-const Inventory = require('../models/Inventory');
+
 const StockAdjustment = require('../models/StockAdjustment');
 const FreezingBatch = require('../models/FreezingBatch');
 
@@ -81,115 +80,10 @@ const loadDemoData = async (req, res, next) => {
       Customer.deleteMany({ company: companyId }),
       Invoice.deleteMany({ company: companyId }),
       Expense.deleteMany({ company: companyId }),
-      Warehouse.deleteMany({ company: companyId }),
       Inventory.deleteMany({ company: companyId }),
       StockAdjustment.deleteMany({ company: companyId }),
       FreezingBatch.deleteMany({ company: companyId }),
     ]);
-
-    // Create Warehouses
-    const warehouse1 = await Warehouse.create({
-      name: 'Main Warehouse',
-      code: 'WH-MAIN',
-      address: '12, Fish Market Road',
-      city: 'Vijayawada',
-      state: 'Andhra Pradesh',
-      manager: req.user.name,
-      phone: req.user.phone || '9876543210',
-      capacity: 500,
-      status: 'Active',
-      isDefault: true,
-      company: companyId,
-    });
-
-    const warehouse2 = await Warehouse.create({
-      name: 'Branch Store',
-      code: 'WH-BRNCH',
-      address: '45, Market Street',
-      city: 'Guntur',
-      state: 'Andhra Pradesh',
-      manager: req.user.name,
-      phone: req.user.phone || '9876543210',
-      capacity: 200,
-      status: 'Active',
-      isDefault: false,
-      company: companyId,
-    });
-
-    // Seed Freezing Batches
-    await FreezingBatch.create([
-      {
-        batchNumber: 'FB-0001',
-        dateFrozen: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 3),
-        datePacked: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2),
-        quantityKgs: 1200,
-        countSize: '40 count',
-        warehouse: warehouse1._id,
-        location: 'Chamber A-3',
-        status: 'packed',
-        remainingKgs: 0,
-        notes: 'Excellent quality Vannamei crop from local farm',
-        company: companyId,
-        createdBy: userId,
-      },
-      {
-        batchNumber: 'FB-0002',
-        dateFrozen: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1),
-        quantityKgs: 850,
-        countSize: '60 count',
-        warehouse: warehouse1._id,
-        location: 'Chamber B-1',
-        status: 'frozen',
-        remainingKgs: 850,
-        notes: 'Regular batch from Coastal Prawns',
-        company: companyId,
-        createdBy: userId,
-      },
-      {
-        batchNumber: 'FB-0003',
-        dateFrozen: new Date(now.getFullYear(), now.getMonth() - 1, 15), // Last month
-        quantityKgs: 1500,
-        countSize: '80 count',
-        warehouse: warehouse2._id,
-        location: 'Chamber C-2',
-        status: 'partial',
-        remainingKgs: 500,
-        notes: 'Seeded historical batch',
-        company: companyId,
-        createdBy: userId,
-      }
-    ]);
-    
-    // Set batchCounter for the company
-    await Company.findByIdAndUpdate(companyId, { batchCounter: 4 });
-
-    // Create Products (only Prawn Intake Lots)
-    const productsData = [
-      { name: 'White Prawns 100 count', brand: 'Bay Seafood', category: 'White Prawns', countSize: '100 count', weight: 50, price: 500, purchasePrice: 420, stock: 120, lowStockThreshold: 20, intakeDate: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 3) },
-      { name: 'Vannamei Raw Prawns 120 count', brand: 'Premium Prawns', category: 'Vannamei Prawns', countSize: '120 count', weight: 25, price: 400, purchasePrice: 340, stock: 85, lowStockThreshold: 20, intakeDate: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1) },
-      { name: 'Scampi Prawns 100 count', brand: 'Ocean Harvest', category: 'Scampi Prawns', countSize: '100 count', weight: 10, price: 520, purchasePrice: 440, stock: 60, lowStockThreshold: 15, intakeDate: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6) },
-      { name: 'Vannamei Raw Prawns 40 count', brand: 'Aqua Farms', category: 'Vannamei Prawns', countSize: '40 count', weight: 25, price: 450, purchasePrice: 380, stock: 150, lowStockThreshold: 20, intakeDate: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2) },
-      { name: 'Tiger Prawns 60 count', brand: 'Coastal Prawns', category: 'Tiger Prawns', countSize: '60 count', weight: 20, price: 650, purchasePrice: 550, stock: 80, lowStockThreshold: 15, intakeDate: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 5) },
-      { name: 'Scampi Prawns 80 count', brand: 'Marine Fresh', category: 'Scampi Prawns', countSize: '80 count', weight: 15, price: 550, purchasePrice: 460, stock: 60, lowStockThreshold: 10, intakeDate: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 10) },
-    ];
-
-    const products = await Product.insertMany(productsData.map((p) => ({ ...p, company: companyId })));
-
-    // Create Inventory entries for both warehouses
-    for (const p of products) {
-      await Inventory.create({
-        product: p._id,
-        warehouse: warehouse1._id,
-        quantity: p.stock,
-        company: companyId,
-      });
-      await Inventory.create({
-        product: p._id,
-        warehouse: warehouse2._id,
-        quantity: 0,
-        company: companyId,
-      });
-    }
 
     // Create Customers
     const customersData = [
@@ -316,7 +210,6 @@ const clearCompanyData = async (req, res, next) => {
       Customer.deleteMany({ company: companyId }),
       Invoice.deleteMany({ company: companyId }),
       Expense.deleteMany({ company: companyId }),
-      Warehouse.deleteMany({ company: companyId }),
       Inventory.deleteMany({ company: companyId }),
       StockAdjustment.deleteMany({ company: companyId }),
       FreezingBatch.deleteMany({ company: companyId }),

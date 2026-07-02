@@ -1,611 +1,357 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useMemo } from "react";
+import { useForm } from "react-hook-form";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/ui/page-header";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { FormInput, FormSelect, FormNumber } from "@/components/forms";
-import {
-  Search, Plus, Pencil, Trash2, X, Package,
-  BookOpen, ChevronLeft, ChevronRight, Tag,
-  AlertTriangle, Weight
-} from "lucide-react";
-import { useState, useMemo, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { validationRules } from "@/lib/validations";
-import {
-  useProducts, useCreateProduct, useUpdateProduct,
-  useDeleteProduct, type Product
-} from "@/hooks/useProducts";
-import { useProducts as useProductsWebSocket } from "@/hooks/useModuleWebSocket";
-import { AP_CATALOG, type CatalogProduct } from "@/data/apAquaCatalog";
+import { FormCombobox, FormSelect, FormNumber } from "@/components/forms";
+import { Plus, X, Package, Search, Calendar, Scale, IndianRupee, TrendingUp, Pencil, Trash2 } from "lucide-react";
 import { createPortal } from "react-dom";
-import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { useProducts } from "@/hooks/useProducts";
+import { usePurchaseOrders } from "@/hooks/usePurchaseOrders";
+import { useCreateIntake, useUpdateIntake, useDeleteIntake } from "@/hooks/useIntake";
+import { useSuppliers } from "@/hooks/useSuppliers";
+import { useProducts as useProductsWebSocket, useInventory as useInventoryWebSocket } from "@/hooks/useModuleWebSocket";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
-const PAGE_SIZE = 10;
-
-const brands = [
-  "Local Supplier", "Coastal Prawns", "Marine Fresh", "Aqua Farms",
-  "Bay Seafood", "Ocean Harvest", "Fresh Catch", "Premium Prawns",
-  "Other"
+const COUNT_VALUES = [
+  "100c", "90c", "80c", "70c", "60c", "50c", "47c", "45c", "42c", "41c", "40c",
+  "37c", "35c", "33c", "32c", "31c", "30c", "27c", "25c", "22c", "21c", "20c",
+  "19c", "18c", "17c", "16c", "15c", "other"
 ];
 
-const categories = [
-  "Vannamei Prawns", "Scampi Prawns", "Tiger Prawns", "White Prawns",
-  "Other"
-];
-
-interface ProductFormData {
-  name: string; brand?: string; category: string;
-  pelletSize?: string; countSize: string; intakeDate: string;
-  weight: number; price?: number;
-  purchasePrice: number; stock?: number; lowStockThreshold?: number;
-  description?: string; imageUrl?: string;
-}
-
-const categoryColors: Record<string, string> = {
-  "Vannamei Prawns": "bg-sky-100 text-sky-700",
-  "Scampi Prawns": "bg-violet-100 text-violet-700",
-  "Tiger Prawns": "bg-orange-100 text-orange-700",
-  "White Prawns": "bg-emerald-100 text-emerald-700",
-  "Other": "bg-gray-100 text-gray-700",
+const getCountGroup = (countSize: string) => {
+  const num = parseInt(countSize);
+  if (isNaN(num)) return "Other";
+  if (num >= 91 && num <= 100) return "91/100";
+  if (num >= 81 && num <= 90) return "81/90";
+  if (num >= 71 && num <= 80) return "71/80";
+  if (num >= 61 && num <= 70) return "61/70";
+  if (num >= 51 && num <= 60) return "51/60";
+  if (num >= 41 && num <= 50) return "41/50";
+  if (num >= 31 && num <= 40) return "31/40";
+  if (num >= 26 && num <= 30) return "26/30";
+  if (num >= 21 && num <= 25) return "21/25";
+  if (num >= 16 && num <= 20) return "16/20";
+  if (num >= 13 && num <= 15) return "13/15";
+  if (num >= 9 && num <= 12) return "8/12";
+  if (num >= 6 && num <= 8) return "6/8";
+  return "Other";
 };
 
-function getCatClass(cat: string) {
-  return categoryColors[cat] || "bg-gray-100 text-gray-700";
+const SORTED_GROUPS = [
+  "6/8", "8/12", "13/15", "16/20", "21/25", "26/30", "31/40", "41/50",
+  "51/60", "61/70", "71/80", "81/90", "91/100", "Other"
+];
+
+interface IntakeFormData {
+  farmerName: string;
+  paymentMethod: string;
+  countValue: string;
+  weight: number;
+  amountPerKg: number;
 }
 
-function ProductSearchCombobox({ onSelect }: { onSelect: (p: CatalogProduct) => void }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full flex items-center justify-between h-10 px-3 rounded-xl border border-border bg-background text-sm text-muted-foreground hover:bg-secondary/50 transition-colors"
-        >
-          Search catalog to auto-fill...
-          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" align="start">
-        <Command>
-          <CommandInput placeholder="Search AP catalog..." />
-          <CommandList>
-            <CommandEmpty>No product found.</CommandEmpty>
-            <CommandGroup>
-              {AP_CATALOG.map((product) => (
-                <CommandItem
-                  key={product.id}
-                  value={product.name + " " + product.brand}
-                  onSelect={() => {
-                    setOpen(false);
-                    onSelect(product);
-                  }}
-                  className="cursor-pointer"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-medium text-foreground">{product.name}</span>
-                    <span className="text-xs text-muted-foreground">{product.brand} · {product.category}</span>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function ProductImage({ product }: { product: Product }) {
-  const [err, setErr] = useState(false);
-  if (!product.imageUrl || err) {
-    return (
-      <div className="w-14 h-14 rounded-xl bg-brand-light/30 flex items-center justify-center shrink-0">
-        <Package className="w-6 h-6 text-brand/60" />
-      </div>
-    );
-  }
-  return (
-    <img
-      src={product.imageUrl}
-      alt={product.name}
-      className="w-14 h-14 rounded-xl object-cover shrink-0 border border-border"
-      onError={() => setErr(true)}
-    />
-  );
-}
-
-export default function Products() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedBrand, setSelectedBrand] = useState("All Brands");
-  const [page, setPage] = useState(1);
-
+export default function PrawnsIntake() {
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isCatalogOpen, setIsCatalogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const { data: allProducts = [], isLoading: loadingProducts, refetch: refetchProducts } = useProducts();
+  const { data: posData, isLoading: loadingPos, refetch: refetchPos } = usePurchaseOrders({ status: "Received" });
+  const { data: farmers = [] } = useSuppliers();
+  const createIntake = useCreateIntake();
+  const updateIntake = useUpdateIntake();
+  const deleteIntake = useDeleteIntake();
+  const queryClient = useQueryClient();
 
-  const { data: allProducts = [], isLoading, refetch } = useProducts({
-    search: searchQuery || undefined,
-    brand: selectedBrand !== "All Brands" ? selectedBrand : undefined,
+  useProductsWebSocket(
+    () => { refetchProducts(); refetchPos(); },
+    () => { refetchProducts(); refetchPos(); },
+    () => { refetchProducts(); refetchPos(); }
+  );
+
+  useInventoryWebSocket(
+    () => { refetchProducts(); refetchPos(); },
+    () => { refetchProducts(); refetchPos(); }
+  );
+
+  const { register, control, handleSubmit, watch, reset, formState: { errors } } = useForm<IntakeFormData>({
+    defaultValues: { paymentMethod: 'Cash', countValue: '40c' }
   });
 
-  // WebSocket integration for product updates
-  useProductsWebSocket(
-    () => {
-      console.log('📦 Product list updated via WebSocket (created)');
-      setLastUpdate(new Date());
-      refetch();
-    },
-    () => {
-      console.log('📦 Product list updated via WebSocket (updated)');
-      setLastUpdate(new Date());
-      refetch();
-    },
-    () => {
-      console.log('📦 Product list updated via WebSocket (deleted)');
-      setLastUpdate(new Date());
-      refetch();
-    }
-  );
+  const weight = watch('weight') || 0;
+  const amountPerKg = watch('amountPerKg') || 0;
+  const totalAmount = weight * amountPerKg;
 
-  const createProduct = useCreateProduct();
-  const updateProduct = useUpdateProduct();
-  const deleteProduct = useDeleteProduct();
-
-  // Client-side pagination
-  const totalPages = Math.max(1, Math.ceil(allProducts.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const products = useMemo(
-    () => allProducts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
-    [allProducts, currentPage]
-  );
-
-  const { register: registerAdd, control: controlAdd, handleSubmit: handleAddSubmit, reset: resetAdd,
-    setValue: setAddValue, formState: { errors: addErrors } } =
-    useForm<ProductFormData>({ mode: "onBlur" });
-
-  const { register: registerEdit, control: controlEdit, handleSubmit: handleEditSubmit, reset: resetEdit,
-    setValue: setEditValue,
-    formState: { errors: editErrors } } =
-    useForm<ProductFormData>({ mode: "onBlur" });
-
-  const onAddSubmit = async (data: ProductFormData) => {
-    await createProduct.mutateAsync({
-      ...data,
-      brand: data.brand || "Local Farm",
-      pelletSize: data.pelletSize || "",
-      countSize: data.countSize || "",
-      intakeDate: data.intakeDate || new Date().toISOString(),
-      price: data.purchasePrice || data.price || 0,
-      purchasePrice: data.purchasePrice || data.price || 0,
-      stock: data.stock ?? 1,
-      lowStockThreshold: data.lowStockThreshold ?? 0,
-      description: data.description || "",
-      imageUrl: data.imageUrl || "",
-    });
-    resetAdd();
-    setIsAddOpen(false);
-  };
-
-  const onEditSubmit = async (data: ProductFormData) => {
-    if (!selectedProduct) return;
-    await updateProduct.mutateAsync({
-      id: selectedProduct._id,
-      ...data,
-      brand: data.brand || selectedProduct.brand || "Local Farm",
-      pelletSize: data.pelletSize || "",
-      countSize: data.countSize || "",
-      intakeDate: data.intakeDate || selectedProduct.intakeDate || new Date().toISOString(),
-      price: data.purchasePrice || data.price || selectedProduct.purchasePrice || selectedProduct.price || 0,
-      purchasePrice: data.purchasePrice || data.price || selectedProduct.purchasePrice || selectedProduct.price || 0,
-      stock: data.stock ?? selectedProduct.stock ?? 1,
-      lowStockThreshold: data.lowStockThreshold ?? 0,
-      description: data.description || "",
-      imageUrl: data.imageUrl || "",
-    });
-    resetEdit();
-    setIsEditOpen(false);
-    setSelectedProduct(null);
-  };
-
-  const handleEdit = (product: Product) => {
-    setSelectedProduct(product);
-    resetEdit({
-      name: product.name, brand: product.brand, category: product.category,
-      pelletSize: product.pelletSize || "", countSize: product.countSize || product.pelletSize || "",
-      intakeDate: (product as any).intakeDate ? new Date((product as any).intakeDate).toISOString().split('T')[0] : "",
-      weight: product.weight,
-      price: product.price, purchasePrice: product.purchasePrice || product.price || 0,
-      stock: product.stock, lowStockThreshold: product.lowStockThreshold,
-      description: product.description || "", imageUrl: product.imageUrl || "",
-    });
-    setIsEditOpen(true);
-  };
-
-  const handleDelete = async () => {
-    if (!selectedProduct) return;
-    await deleteProduct.mutateAsync(selectedProduct._id);
-    setIsDeleteOpen(false);
-    setSelectedProduct(null);
-  };
-
-  // When a product is picked from catalog → pre-fill Add form
-  const handleCatalogSelect = (catalogProduct: CatalogProduct) => {
-    setIsCatalogOpen(false);
-    setIsAddOpen(true);
-    setTimeout(() => {
-      setAddValue("name", catalogProduct.name);
-      setAddValue("brand", catalogProduct.brand);
-      setAddValue("category", catalogProduct.category);
-      setAddValue("countSize", catalogProduct.countSize || "");
-      setAddValue("weight", catalogProduct.weight);
-      setAddValue("intakeDate", new Date().toISOString().split("T")[0]);
-      setAddValue("price", catalogProduct.suggestedPurchasePrice || catalogProduct.suggestedPrice || 0);
-      setAddValue("purchasePrice", catalogProduct.suggestedPurchasePrice || catalogProduct.suggestedPrice || 0);
-      setAddValue("description", catalogProduct.description);
-      setAddValue("imageUrl", catalogProduct.imageUrl);
-    }, 50);
-  };
-
-  const handleCatalogSelectForEdit = (catalogProduct: CatalogProduct) => {
-    setIsCatalogOpen(false);
-    if (!selectedProduct) return;
-    setTimeout(() => {
-      setEditValue("name", catalogProduct.name);
-      setEditValue("brand", catalogProduct.brand);
-      setEditValue("category", catalogProduct.category);
-      setEditValue("countSize", catalogProduct.countSize || "");
-      setEditValue("weight", catalogProduct.weight);
-      setEditValue(
-        "intakeDate",
-        selectedProduct.intakeDate
-          ? new Date(selectedProduct.intakeDate).toISOString().split("T")[0]
-          : new Date().toISOString().split("T")[0]
+  const onAddSubmit = (data: IntakeFormData) => {
+    if (editId) {
+      updateIntake.mutate(
+        { id: editId, data },
+        {
+          onSuccess: () => {
+            setIsAddOpen(false);
+            setEditId(null);
+            reset();
+          },
+        }
       );
-      setEditValue("price", catalogProduct.suggestedPurchasePrice || catalogProduct.suggestedPrice || 0);
-      setEditValue("purchasePrice", catalogProduct.suggestedPurchasePrice || catalogProduct.suggestedPrice || 0);
-      setEditValue("description", catalogProduct.description);
-      setEditValue("imageUrl", catalogProduct.imageUrl);
-    }, 50);
+    } else {
+      createIntake.mutate(data, {
+        onSuccess: () => {
+          setIsAddOpen(false);
+          reset();
+        },
+      });
+    }
   };
 
-  const handleSearchChange = (v: string) => { setSearchQuery(v); setPage(1); };
-  const handleBrandChange = (v: string) => { setSelectedBrand(v); setPage(1); };
+  const openAddModal = () => {
+    setEditId(null);
+    reset({
+      farmerName: "",
+      paymentMethod: "Cash",
+      countValue: "40c",
+      weight: 0,
+      amountPerKg: 0
+    });
+    setIsAddOpen(true);
+  };
+
+  const handleEditClick = (po: any) => {
+    const item = po.items[0];
+    if (!item) return;
+    setEditId(po._id);
+    reset({
+      farmerName: po.supplierName,
+      paymentMethod: po.notes?.includes("Cash") ? "Cash" : "Credit",
+      countValue: item.productName.replace("Vannamei Prawns ", ""),
+      weight: item.quantity,
+      amountPerKg: item.unitCost,
+    });
+    setIsAddOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteId) {
+      deleteIntake.mutate(deleteId, {
+        onSuccess: () => setDeleteId(null),
+      });
+    }
+  };
+
+  const inventoryBuckets = useMemo(() => {
+    const buckets: Record<string, number> = {};
+    SORTED_GROUPS.forEach(g => buckets[g] = 0);
+
+    const vannameiProducts = allProducts.filter(p => p.category === 'Vannamei Prawns');
+    vannameiProducts.forEach(p => {
+      if (!p.countSize) return;
+      const group = getCountGroup(p.countSize);
+      if (buckets[group] !== undefined) {
+        buckets[group] += (p.stock || 0);
+      } else {
+        buckets['Other'] = (buckets['Other'] || 0) + (p.stock || 0);
+      }
+    });
+    return buckets;
+  }, [allProducts]);
+
+  const intakeHistory = useMemo(() => {
+    return (posData?.data || []).filter(po => po.poNumber.startsWith('IN-') || po.poNumber.startsWith('PO-'));
+  }, [posData]);
 
   return (
-    <AppLayout title="Prawns Intake" subtitle="Manage your prawns intake records">
+    <AppLayout title="Prawns Intake" subtitle="Manage your Vannamei prawns intake">
       <PageHeader
         title="Prawns Intake"
-        description="Add, edit, and manage your daily prawns intake records"
+        description="Add and manage your Vannamei prawns intake and inventory by count size"
         actions={
-          <div className="flex items-center gap-2">
-            {/* <button
-              onClick={() => setIsCatalogOpen(true)}
-              className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-border bg-surface text-sm font-display font-semibold text-foreground hover:bg-secondary transition-colors"
-            >
-              <BookOpen className="w-4 h-4 text-brand" />
-              <span className="hidden sm:inline">Browse Catalog</span>
-            </button> */}
-            <button
-              onClick={() => { resetAdd(); setIsAddOpen(true); }}
-              className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-brand text-white text-sm font-display font-semibold hover:bg-brand/90 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Add Prawns Intake</span>
-            </button>
-          </div>
+          <button
+            onClick={openAddModal}
+            className="flex items-center gap-2 bg-brand text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-brand/90 transition-colors shadow-button"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Add Intake</span>
+          </button>
         }
       />
 
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-2 mb-4">
-        {/* <div className="flex items-center gap-2 h-10 px-3 rounded-xl border border-border bg-surface flex-1 max-w-md">
-          <Search className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
-          <input
-            value={searchQuery}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="flex-1 bg-transparent outline-none placeholder:text-muted-foreground text-foreground text-sm"
-            placeholder="Search products…"
-          />
-          {searchQuery && (
-            <button onClick={() => handleSearchChange("")}>
-              <X className="w-3.5 h-3.5 text-muted-foreground" />
-            </button>
-          )}
-        </div> */}
-        <div className="flex gap-2">
-
-          {/* <Select value={String(selectedBrand)} onValueChange={(val) => handleBrandChange(val)}>
-        <SelectTrigger className="flex-1 sm:flex-none h-10 px-3 rounded-xl border border-border bg-surface text-sm text-foreground outline-none focus:ring-2 focus:ring-brand/50">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          
-            <SelectItem value={"All Brands".toString()}>All Brands</SelectItem>
-            {brands.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-          
-        </SelectContent>
-      </Select> */}
-
-
-        </div>
-      </div>
-
-      {/* Content */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 rounded-full border-4 border-brand/20 border-t-brand animate-spin" />
-        </div>
-      ) : allProducts.length === 0 ? (
-        <div className="bg-surface rounded-2xl border border-border p-10 flex flex-col items-center text-center">
-          <div className="w-16 h-16 rounded-2xl bg-brand-light flex items-center justify-center mb-4">
-            <Package className="w-8 h-8 text-brand" />
-          </div>
-          {/* <h3 className="font-display font-bold text-foreground text-base mb-1">No products yet</h3>
-          <p className="text-sm text-muted-foreground max-w-xs mb-5">
-            Start by browsing the AP Aquaculture catalog or add a product manually.
-          </p> */}
-          <div className="flex gap-3">
-            {/* <button
-              onClick={() => setIsCatalogOpen(true)}
-              className="flex items-center gap-2 h-9 px-4 rounded-lg border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors"
-            >
-              <BookOpen className="w-4 h-4 text-brand" /> Browse Catalog
-            </button> */}
-            <button
-              onClick={() => { resetAdd(); setIsAddOpen(true); }}
-              className="flex items-center gap-2 h-9 px-4 rounded-lg bg-brand text-white text-sm font-display font-semibold hover:bg-brand/90 transition-colors"
-            >
-              <Plus className="w-4 h-4" /> Add Manually
-            </button>
-          </div>
-        </div>
-      ) : (
-        <>
-          {/* Mobile Card Grid */}
-          <div className="sm:hidden space-y-3">
-            {products.map((p) => {
+      <div className="mb-6">
+        <h3 className="font-display font-semibold text-lg text-foreground mb-3 flex items-center gap-2">
+          <Package className="w-5 h-5 text-brand" /> Current Inventory by Count
+        </h3>
+        
+        {loadingProducts ? (
+          <div className="flex justify-center p-8"><div className="w-6 h-6 rounded-full border-2 border-brand/20 border-t-brand animate-spin" /></div>
+        ) : (
+          <div className="flex flex-wrap gap-3">
+            {SORTED_GROUPS.map(group => {
+              const kg = inventoryBuckets[group];
+              if (kg === 0 && group !== '31/40' && group !== '26/30' && group !== '21/25' && group !== '16/20' && group !== 'Other') return null;
               return (
-                <div
-                  key={p._id}
-                  className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden"
-                >
-                  <div className="flex items-start gap-3 p-3">
-                    <ProductImage product={p} />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-display font-semibold text-sm text-foreground leading-tight line-clamp-2">
-                        {p.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{p.brand}</p>
-                      <span className={`inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-semibold ${getCatClass(p.category)}`}>
-                        {p.category}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="border-t border-border/50 px-3 py-2 flex items-center justify-between">
-                    <div className="flex items-center gap-4 text-xs">
-                      <div>
-                        <p className="text-muted-foreground text-[10px]">Purchase Price</p>
-                        <p className="font-display font-bold text-foreground">₹{(p.purchasePrice || p.price).toLocaleString("en-IN")}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground text-[10px]">Intake Date</p>
-                        <p className="font-semibold text-foreground">{p.intakeDate ? new Date(p.intakeDate).toLocaleDateString("en-IN") : "-"}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground text-[10px]">Count / Wt</p>
-                        <p className="font-semibold text-foreground">{p.countSize || p.pelletSize || "-"} · {p.weight}kg</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={() => handleEdit(p)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-brand hover:bg-brand-light transition-colors"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => { setSelectedProduct(p); setIsDeleteOpen(true); }}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
+                <div key={group} className="flex-1 min-w-[120px] max-w-[160px] bg-surface border border-border rounded-xl p-4 flex flex-col items-center justify-center text-center shadow-sm hover:border-brand/30 hover:shadow-md transition-all">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">{group}</span>
+                  <span className={cn("font-display text-2xl font-bold", kg > 0 ? "text-foreground" : "text-muted-foreground/50")}>
+                    {kg.toLocaleString('en-IN', { maximumFractionDigits: 1 })}
+                    <span className="text-sm font-normal text-muted-foreground ml-1">kg</span>
+                  </span>
                 </div>
               );
             })}
           </div>
+        )}
+      </div>
 
-          {/* Desktop Table */}
-          <div className="hidden sm:block bg-surface rounded-2xl border border-border shadow-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-background">
-                    <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Product</th>
-                    <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Category</th>
-                    <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Count / Wt</th>
-                    <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Intake Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Price</th>
-                    <th className="px-4 py-3 text-left text-xs font-display font-semibold text-muted-foreground uppercase tracking-wide">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map((p) => {
-                    return (
-                      <tr key={p._id} className="border-b border-border last:border-0 hover:bg-background/50 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <ProductImage product={p} />
-                            <div>
-                              <p className="font-medium text-foreground">{p.name}</p>
-                              <p className="text-xs text-muted-foreground">{p.brand}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getCatClass(p.category)}`}>
-                            {p.category}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground">
-                          {p.countSize || p.pelletSize || "-"} · {p.weight}kg
-                        </td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground">
-                          {p.intakeDate ? new Date(p.intakeDate).toLocaleDateString("en-IN") : "-"}
-                        </td>
-                        <td className="px-4 py-3">
-                          ₹{(p.purchasePrice || p.price).toLocaleString("en-IN")}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleEdit(p)}
-                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-brand hover:bg-brand-light transition-colors"
-                            >
-                              <Pencil className="w-3.5 h-3.5" /> Edit
-                            </button>
-                            <button
-                              onClick={() => { setSelectedProduct(p); setIsDeleteOpen(true); }}
-                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" /> Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+      <div className="bg-surface rounded-2xl border border-border shadow-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-border">
+          <h3 className="font-display font-semibold text-foreground">Recent Intakes</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-background/50">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Transaction</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Farmer (Supplier)</th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Items / Wt</th>
+                <th className="px-5 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Amount</th>
+                <th className="px-5 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loadingPos ? (
+                <tr><td colSpan={6} className="py-8 text-center"><div className="w-6 h-6 mx-auto rounded-full border-2 border-brand/20 border-t-brand animate-spin" /></td></tr>
+              ) : intakeHistory.length === 0 ? (
+                <tr><td colSpan={6} className="py-8 text-center text-muted-foreground text-sm">No recent intakes found</td></tr>
+              ) : intakeHistory.map(po => (
+                <tr key={po._id} className="border-b border-border last:border-0 hover:bg-background/50 transition-colors">
+                  <td className="px-5 py-3 whitespace-nowrap text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 opacity-50" />
+                      {new Date(po.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    </div>
+                  </td>
+                  <td className="px-5 py-3 whitespace-nowrap font-medium text-foreground">{po.poNumber}</td>
+                  <td className="px-5 py-3 whitespace-nowrap">{po.supplierName || 'Unknown Farmer'}</td>
+                  <td className="px-5 py-3">
+                    <div className="flex flex-col gap-1">
+                      {po.items.map((item, i) => (
+                        <span key={i} className="text-xs bg-secondary/50 text-foreground px-2 py-1 rounded-md w-fit">
+                          {item.productName.replace('Vannamei Prawns ', '')} · {item.quantity}kg @ ₹{item.unitCost}/kg
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-5 py-3 whitespace-nowrap text-right font-display font-semibold text-foreground">
+                    ₹{po.totalAmount.toLocaleString('en-IN')}
+                    {po.notes && po.notes.includes('Credit') && (
+                      <span className="ml-2 text-[10px] uppercase bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">Credit</span>
+                    )}
+                    {po.notes && po.notes.includes('Cash') && (
+                      <span className="ml-2 text-[10px] uppercase bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">Cash</span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3 whitespace-nowrap text-right">
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => handleEditClick(po)} className="p-1.5 text-muted-foreground hover:text-brand hover:bg-brand/10 rounded-lg transition-colors">
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => setDeleteId(po._id)} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4 px-1">
-              <span className="text-xs text-muted-foreground">
-                Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, allProducts.length)} of {allProducts.length}
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-secondary disabled:opacity-40 transition-colors"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pg: number;
-                  if (totalPages <= 5) pg = i + 1;
-                  else if (currentPage <= 3) pg = i + 1;
-                  else if (currentPage >= totalPages - 2) pg = totalPages - 4 + i;
-                  else pg = currentPage - 2 + i;
-                  return (
-                    <button
-                      key={pg}
-                      onClick={() => setPage(pg)}
-                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-display font-semibold transition-colors ${pg === currentPage ? "bg-brand text-white" : "border border-border text-muted-foreground hover:bg-secondary"
-                        }`}
-                    >
-                      {pg}
-                    </button>
-                  );
-                })}
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-secondary disabled:opacity-40 transition-colors"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-        </>
-      )}
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the intake record and reverse any stock and farmer ledger updates associated with it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+              Delete Intake
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      {/* Catalog Browser */}
-      {isCatalogOpen && (
-        <ProductCatalogBrowser
-          onSelect={handleCatalogSelect}
-          onClose={() => setIsCatalogOpen(false)}
-        />
-      )}
-
-      {/* Add Product Modal */}
       {isAddOpen && createPortal(
         <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
-          <div className="bg-surface w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl border border-border shadow-panel max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+          <div className="bg-surface w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl border border-border shadow-panel max-h-[95vh] overflow-y-auto">
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border">
               <div>
-                <h2 className="font-display font-bold text-lg text-foreground">Add Prawns</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">Enter prawns details or browse catalog</p>
+                <h2 className="font-display font-bold text-lg text-foreground">{editId ? "Edit Prawn Intake" : "Add Prawn Intake"}</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">{editId ? "Modify an existing intake" : "Record a new vannamei prawns intake"}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => { setIsAddOpen(false); setIsCatalogOpen(true); }}
-                  className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border text-xs font-display font-semibold text-brand hover:bg-brand-light transition-colors"
-                >
-                  <BookOpen className="w-3.5 h-3.5" /> Catalog
-                </button>
-                <button onClick={() => setIsAddOpen(false)} className="text-muted-foreground hover:text-foreground">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+              <button onClick={() => setIsAddOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <div className="px-5 pt-4 pb-2 border-b border-border bg-muted/20">
-              <label className="text-xs font-display font-semibold text-foreground mb-1.5 block">
-                Quick Fill
-              </label>
-              <ProductSearchCombobox onSelect={handleCatalogSelect} />
-            </div>
-
-            <form onSubmit={handleAddSubmit(onAddSubmit)} className="p-5 space-y-4">
-              <FormInput
-                label="Product Name"
-                placeholder="Avanti Manamei Vannamei Starter"
-                {...registerAdd("name", validationRules.productName)}
-                error={addErrors.name}
+            <form onSubmit={handleSubmit(onAddSubmit)} className="p-5 space-y-4">
+              <FormCombobox
+                label="Farmer Name"
+                placeholder="Select or enter new farmer name"
+                name="farmerName"
+                control={control}
+                options={farmers.map(f => ({ value: f.name, label: f.name }))}
+                required
               />
+
               <div className="grid grid-cols-2 gap-3">
                 <FormSelect
-                  label="Category"
-                  options={categories.map((c) => ({ value: c, label: c }))}
-                  name="category" control={controlAdd}
+                  label="Payment Method"
+                  options={[{ value: 'Cash', label: 'Cash' }, { value: 'Credit', label: 'Credit' }]}
+                  name="paymentMethod" control={control}
                 />
-                <FormInput
-                  type="date"
-                  label="Intake Date"
-                  {...registerAdd("intakeDate")}
+                <FormSelect
+                  label="Count Value"
+                  options={COUNT_VALUES.map(c => ({ value: c, label: c }))}
+                  name="countValue" control={control}
                 />
               </div>
+
               <div className="grid grid-cols-2 gap-3">
-                <FormInput
-                  label="Count Size"
-                  placeholder="40 count"
-                  {...registerAdd("countSize")}
-                />
                 <FormNumber
                   label="Weight (kg)"
-                  placeholder="25"
-                  {...registerAdd("weight", { required: "Required", min: { value: 0.1, message: "Must be > 0" } })}
-                  error={addErrors.weight}
+                  placeholder="0"
+                  {...register("weight", { required: "Required", min: { value: 0.1, message: "> 0" } })}
+                  error={errors.weight}
+                  icon={Scale}
+                />
+                <FormNumber
+                  label="Amount Per Kg (₹)"
+                  placeholder="0"
+                  {...register("amountPerKg", { required: "Required", min: { value: 0, message: ">= 0" } })}
+                  error={errors.amountPerKg}
+                  icon={IndianRupee}
                 />
               </div>
-              <FormNumber label="Purchase Price (₹)" prefix="₹" placeholder="2600" {...registerAdd("purchasePrice")} />
+
+              <div className="mt-2 p-4 bg-brand/5 border border-brand/10 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-2 text-brand">
+                  <TrendingUp className="w-5 h-5" />
+                  <span className="font-semibold text-sm">Total Amount</span>
+                </div>
+                <span className="font-display font-bold text-xl text-brand">
+                  ₹{totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              {watch('paymentMethod') === 'Credit' && (
+                <p className="text-xs text-orange-600 font-medium px-1">
+                  * This amount will be added to the farmer's outstanding balance.
+                </p>
+              )}
 
               <div className="flex gap-3 pt-2">
                 <button
@@ -617,12 +363,12 @@ export default function Products() {
                 </button>
                 <button
                   type="submit"
-                  disabled={createProduct.isPending}
+                  disabled={createIntake.isPending}
                   className="flex-1 h-11 rounded-xl bg-brand text-white text-sm font-display font-semibold hover:bg-brand/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                 >
-                  {createProduct.isPending ? (
-                    <><div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /><span>Adding…</span></>
-                  ) : "Add Prawns"}
+                  {createIntake.isPending ? (
+                    <><div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /><span>Saving…</span></>
+                  ) : "Save Intake"}
                 </button>
               </div>
             </form>
@@ -630,70 +376,6 @@ export default function Products() {
         </div>,
         document.body
       )}
-
-      {/* Edit Product Modal */}
-      {isEditOpen && selectedProduct && createPortal(
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-[70] p-0 sm:p-4">
-          <div className="bg-surface w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl border border-border shadow-panel max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border">
-              <div className="flex items-center gap-3">
-                <ProductImage product={selectedProduct} />
-                <div>
-                  <h2 className="font-display font-bold text-base text-foreground">Edit Product</h2>
-                  <p className="text-xs text-muted-foreground truncate max-w-[200px]">{selectedProduct.name}</p>
-                </div>
-              </div>
-              <button onClick={() => { setIsEditOpen(false); setSelectedProduct(null); }} className="text-muted-foreground hover:text-foreground">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="px-5 pt-4 pb-2 border-b border-border bg-muted/20">
-              <label className="text-xs font-display font-semibold text-foreground mb-1.5 block">
-                Update from Catalog
-              </label>
-              <ProductSearchCombobox onSelect={handleCatalogSelectForEdit} />
-            </div>
-
-            <form onSubmit={handleEditSubmit(onEditSubmit)} className="p-5 space-y-4">
-              <FormInput label="Product Name" {...registerEdit("name", validationRules.productName)} error={editErrors.name} />
-              <div className="grid grid-cols-2 gap-3">
-                <FormSelect label="Category" options={categories.map((c) => ({ value: c, label: c }))} name="category" control={controlEdit} />
-                <FormInput type="date" label="Intake Date" {...registerEdit("intakeDate")} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <FormInput
-                  label="Count Size"
-                  placeholder="40 count"
-                  {...registerEdit("countSize")}
-                />
-                <FormNumber label="Weight (kg)" {...registerEdit("weight", { required: "Required", min: { value: 0.1, message: "Must be > 0" } })} error={editErrors.weight} />
-              </div>
-              <FormNumber label="Purchase Price (₹)" prefix="₹" {...registerEdit("purchasePrice")} />
-
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => { setIsEditOpen(false); setSelectedProduct(null); }} className="flex-1 h-11 rounded-xl border border-border bg-surface text-sm font-display font-semibold hover:bg-secondary transition-colors">Cancel</button>
-                <button type="button" onClick={() => { setIsDeleteOpen(true); }} className="h-11 px-4 rounded-xl border border-destructive/20 bg-destructive/5 text-destructive text-sm font-display font-semibold hover:bg-destructive/10 transition-colors"><Trash2 className="w-4 h-4" /></button>
-                <button type="submit" disabled={updateProduct.isPending} className="flex-1 h-11 rounded-xl bg-brand text-white text-sm font-display font-semibold hover:bg-brand/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
-                  {updateProduct.isPending ? (<><div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" /><span>Saving…</span></>) : "Save Changes"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      <ConfirmDialog
-        isOpen={isDeleteOpen}
-        title="Delete Product"
-        message={`Are you sure you want to delete "${selectedProduct?.name}"? This cannot be undone.`}
-        confirmText="Delete"
-        isDestructive
-        isLoading={deleteProduct.isPending}
-        onConfirm={handleDelete}
-        onCancel={() => { setIsDeleteOpen(false); setSelectedProduct(null); }}
-      />
     </AppLayout>
   );
 }

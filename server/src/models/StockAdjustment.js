@@ -7,13 +7,9 @@ const stockAdjustmentSchema = new mongoose.Schema(
       ref: 'Product',
       required: true,
     },
-    warehouse: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Warehouse',
-    },
     type: {
       type: String,
-      enum: ['add', 'remove', 'transfer_in', 'transfer_out', 'sale', 'return', 'damage', 'adjustment'],
+      enum: ['add', 'remove', 'sale', 'return', 'damage', 'adjustment'],
       required: true,
     },
     quantity: {

@@ -15,6 +15,7 @@ import {
   ShoppingBag,
   RotateCcw,
   Snowflake,
+  Tractor,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -27,6 +28,8 @@ const primaryNav = [
 
 const moreNav = [
   { to: "/freezing-batches", label: "Freezing", icon: Snowflake },
+  { to: "/farmers", label: "Farmers", icon: Tractor },
+  { to: "/expenses", label: "Expenses", icon: Receipt },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 

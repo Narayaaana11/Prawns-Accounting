@@ -14,6 +14,7 @@ import {
   ShoppingBag,
   RotateCcw,
   Snowflake,
+  Tractor,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLogo } from "@/components/AppLogo";
@@ -24,6 +25,7 @@ const navItems = [
   { to: "/freezing-batches", label: "Freezing Batches", icon: Snowflake },
   { to: "/sales", label: "Sales", icon: ShoppingCart },
   { to: "/customers", label: "Customers", icon: Users },
+  { to: "/farmers", label: "Farmers", icon: Tractor },
   { to: "/expenses", label: "Expenses", icon: Receipt },
   { to: "/settings", label: "Settings", icon: Settings },
 ];

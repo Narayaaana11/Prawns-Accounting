@@ -1,6 +1,5 @@
 const FreezingBatch = require('../models/FreezingBatch');
 const Company = require('../models/Company');
-const Warehouse = require('../models/Warehouse');
 
 // Generate next batch number
 const generateBatchNumber = async (company, session) => {
@@ -28,7 +27,6 @@ const getBatches = async (req, res, next) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [batches, total] = await Promise.all([
       FreezingBatch.find(query)
-        .populate('warehouse', 'name')
         .populate('createdBy', 'name')
         .sort({ dateFrozen: -1 })
         .skip(skip)
@@ -46,7 +44,6 @@ const getBatches = async (req, res, next) => {
 const getBatch = async (req, res, next) => {
   try {
     const batch = await FreezingBatch.findOne({ _id: req.params.id, company: req.companyId })
-      .populate('warehouse', 'name')
       .populate('createdBy', 'name');
     if (!batch) return res.status(404).json({ success: false, message: 'Freezing batch not found.' });
     res.json({ success: true, data: batch });
@@ -58,12 +55,9 @@ const getBatch = async (req, res, next) => {
 // POST /api/freezing-batches
 const createBatch = async (req, res, next) => {
   try {
-    const { dateFrozen, datePacked, quantityKgs, countSize, warehouseId, location, notes } = req.body;
+    const { dateFrozen, datePacked, quantityKgs, countSize, location, notes } = req.body;
 
     const company = await Company.findById(req.companyId);
-    const warehouse = await Warehouse.findOne({ _id: warehouseId, company: req.companyId });
-    if (!warehouse) return res.status(404).json({ success: false, message: 'Warehouse not found.' });
-
     const batchNumber = await generateBatchNumber(company);
 
     const batch = await FreezingBatch.create({
@@ -72,7 +66,6 @@ const createBatch = async (req, res, next) => {
       datePacked,
       quantityKgs,
       countSize,
-      warehouse: warehouseId,
       location,
       status: datePacked ? 'packed' : 'frozen',
       remainingKgs: quantityKgs,
@@ -82,7 +75,6 @@ const createBatch = async (req, res, next) => {
     });
 
     const populated = await FreezingBatch.findById(batch._id)
-      .populate('warehouse', 'name')
       .populate('createdBy', 'name');
 
     res.status(201).json({ success: true, data: populated });
@@ -111,7 +103,6 @@ const updateBatch = async (req, res, next) => {
     await batch.save();
 
     const populated = await FreezingBatch.findById(batch._id)
-      .populate('warehouse', 'name')
       .populate('createdBy', 'name');
 
     res.json({ success: true, data: populated });
@@ -153,7 +144,6 @@ const getAvailableBatches = async (req, res, next) => {
     };
 
     const batches = await FreezingBatch.find(query)
-      .populate('warehouse', 'name')
       .sort({ dateFrozen: -1 });
 
     res.json({ success: true, data: batches });

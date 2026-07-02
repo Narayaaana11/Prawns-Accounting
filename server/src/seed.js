@@ -6,11 +6,9 @@ const Company = require('./models/Company');
 const User = require('./models/User');
 const Product = require('./models/Product');
 const Customer = require('./models/Customer');
-const Warehouse = require('./models/Warehouse');
 const Invoice = require('./models/Invoice');
 const Expense = require('./models/Expense');
 const StockAdjustment = require('./models/StockAdjustment');
-const Inventory = require('./models/Inventory');
 const Supplier = require('./models/Supplier');
 const PurchaseOrder = require('./models/PurchaseOrder');
 const CreditNote = require('./models/CreditNote');
@@ -27,11 +25,9 @@ const seed = async () => {
     User.deleteMany({}),
     Product.deleteMany({}),
     Customer.deleteMany({}),
-    Warehouse.deleteMany({}),
     Invoice.deleteMany({}),
     Expense.deleteMany({}),
     StockAdjustment.deleteMany({}),
-    Inventory.deleteMany({}),
     Supplier.deleteMany({}),
     PurchaseOrder.deleteMany({}),
     CreditNote.deleteMany({}),
@@ -93,49 +89,6 @@ const seed = async () => {
   });
   console.log('✅ Users created');
 
-  // Create Warehouses
-  const warehouse1 = await Warehouse.create({
-    name: 'Main Warehouse',
-    code: 'WH-MAIN',
-    address: '12, Fish Market Road',
-    city: 'Vijayawada',
-    state: 'Andhra Pradesh',
-    manager: 'Rajesh Sharma',
-    phone: '9876543210',
-    capacity: 500,
-    status: 'Active',
-    isDefault: true,
-    company: company._id,
-  });
-
-  const warehouse2 = await Warehouse.create({
-    name: 'Branch Store',
-    code: 'WH-BRNCH',
-    address: '45, Market Street',
-    city: 'Guntur',
-    state: 'Andhra Pradesh',
-    manager: 'Priya Nair',
-    phone: '9876500001',
-    capacity: 200,
-    status: 'Active',
-    isDefault: false,
-    company: company._id,
-  });
-
-  const warehouse3 = await Warehouse.create({
-    name: 'Transit Hub',
-    code: 'WH-TRANS',
-    address: 'Highway NH-65, Km 12',
-    city: 'Tenali',
-    state: 'Andhra Pradesh',
-    manager: 'Kiran Babu',
-    capacity: 100,
-    status: 'Active',
-    isDefault: false,
-    company: company._id,
-  });
-  console.log('✅ Warehouses created');
-
   // Create Products
   const productsData = [
     { name: 'Vannamei Raw Prawns 40 count', brand: 'Aqua Farms', category: 'Vannamei Prawns', countSize: '40 count', weight: 25, price: 450, purchasePrice: 380, stock: 120, lowStockThreshold: 20 },
@@ -152,31 +105,6 @@ const seed = async () => {
 
   const products = await Product.insertMany(productsData.map((p) => ({ ...p, company: company._id })));
   console.log(`✅ ${products.length} products created`);
-
-  // Create Inventory entries for warehouses
-  const inventoryEntries = [];
-  for (const p of products) {
-    inventoryEntries.push({
-      product: p._id,
-      warehouse: warehouse1._id,
-      quantity: p.stock,
-      company: company._id,
-    });
-    inventoryEntries.push({
-      product: p._id,
-      warehouse: warehouse2._id,
-      quantity: 0,
-      company: company._id,
-    });
-    inventoryEntries.push({
-      product: p._id,
-      warehouse: warehouse3._id,
-      quantity: 0,
-      company: company._id,
-    });
-  }
-  await Inventory.insertMany(inventoryEntries);
-  console.log(`✅ ${inventoryEntries.length} inventory records created`);
 
   // Create Suppliers
   const suppliersData = [
@@ -213,7 +141,6 @@ const seed = async () => {
     expectedDate: new Date(2026, 4, 15),
     receivedDate: new Date(2026, 4, 16),
     notes: 'Urgent stocking for seasonal demand',
-    warehouse: warehouse1._id,
     receivedBy: owner._id,
     createdBy: owner._id,
     company: company._id
@@ -236,9 +163,6 @@ const seed = async () => {
     totalAmount: subtotalPo2,
     status: 'Ordered',
     expectedDate: new Date(2026, 6, 20),
-    notes: 'Regular monthly order',
-    warehouse: warehouse1._id,
-    createdBy: owner._id,
     company: company._id
   });
   console.log('✅ Purchase Orders created');
@@ -331,7 +255,6 @@ const seed = async () => {
       reason: 'Bags damaged during transport',
       totalAmount: cnLineTotal,
       status: 'Applied',
-      warehouse: warehouse1._id,
       createdBy: owner._id,
       company: company._id
     });

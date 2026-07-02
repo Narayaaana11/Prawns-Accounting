@@ -19,7 +19,7 @@ const productSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      default: 'Other',
+      default: 'Vannamei Prawns',
     },
     pelletSize: {
       type: String,
@@ -27,8 +27,15 @@ const productSchema = new mongoose.Schema(
     },
     countSize: {
       type: String,
-      trim: true, // e.g., "40 count", "60 count" for prawns
-      enum: ['40 count', '60 count', '80 count', '100 count', '120 count', 'Other'],
+      trim: true,
+      enum: [
+        '100c', '90c', '80c', '70c', '60c', '50c', '47c', '45c', 
+        '42c', '41c', '40c', '37c', '35c', '33c', '32c', '31c', 
+        '30c', '27c', '25c', '22c', '21c', '20c', '19c', '18c', 
+        '17c', '16c', '15c', 'other',
+        // keep old values temporarily to avoid breaking existing data
+        '40 count', '60 count', '80 count', '100 count', '120 count', 'Other'
+      ],
     },
     intakeDate: {
       type: Date,

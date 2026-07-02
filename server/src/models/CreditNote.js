@@ -56,10 +56,6 @@ const creditNoteSchema = new mongoose.Schema(
       enum: ['Issued', 'Applied'],
       default: 'Issued',
     },
-    warehouse: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Warehouse',
-    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
