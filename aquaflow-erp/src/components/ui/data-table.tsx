@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { ReactNode } from "react";
+import { Skeleton } from "@/components/ui/loading-skeleton";
 
 interface Column<T> {
   key: string;
@@ -11,6 +12,8 @@ interface Column<T> {
 interface DataTableProps<T> {
   columns: Column<T>[];
   data: T[];
+  isLoading?: boolean;
+  skeletonRows?: number;
   emptyTitle?: string;
   emptyDescription?: string;
   emptyAction?: ReactNode;
@@ -18,13 +21,13 @@ interface DataTableProps<T> {
   mobileCard?: (row: T, index: number) => ReactNode;
 }
 
-export function DataTable<T>({ columns, data, emptyTitle, emptyDescription, emptyAction, mobileCard }: DataTableProps<T>) {
-  const isEmpty = data.length === 0;
+export function DataTable<T>({ columns, data, isLoading = false, skeletonRows = 5, emptyTitle, emptyDescription, emptyAction, mobileCard }: DataTableProps<T>) {
+  const isEmpty = data.length === 0 && !isLoading;
 
   return (
     <div>
       {/* Mobile card list — only when mobileCard prop is provided */}
-      {mobileCard && !isEmpty && (
+      {mobileCard && !isEmpty && !isLoading && (
         <div className="sm:hidden space-y-3">
           {data.map((row, i) => (
             <div key={i}>{mobileCard(row, i)}</div>
@@ -33,7 +36,7 @@ export function DataTable<T>({ columns, data, emptyTitle, emptyDescription, empt
       )}
 
       {/* Desktop table (also shown on mobile when no mobileCard provided) */}
-      <div className={cn("bg-surface rounded-xl border border-border shadow-card overflow-hidden", mobileCard && !isEmpty ? "hidden sm:block" : "")}>
+      <div className={cn("bg-surface rounded-xl border border-border shadow-card overflow-hidden", mobileCard && !isEmpty && !isLoading ? "hidden sm:block" : "")}>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -52,7 +55,17 @@ export function DataTable<T>({ columns, data, emptyTitle, emptyDescription, empt
               </tr>
             </thead>
             <tbody>
-              {isEmpty ? (
+              {isLoading ? (
+                Array.from({ length: skeletonRows }).map((_, i) => (
+                  <tr key={i} className="border-b border-border last:border-0">
+                    {columns.map((col) => (
+                      <td key={col.key} className={cn("px-4 py-3.5", col.className)}>
+                        <Skeleton className="h-4 w-full max-w-[160px]" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : isEmpty ? (
                 <tr>
                   <td colSpan={columns.length} className="px-4 py-16 text-center">
                     <p className="font-display font-semibold text-foreground">{emptyTitle ?? "No data yet"}</p>

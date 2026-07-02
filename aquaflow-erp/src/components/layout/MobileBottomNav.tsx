@@ -14,17 +14,19 @@ import {
   Truck,
   ShoppingBag,
   RotateCcw,
+  Snowflake,
 } from "lucide-react";
 import { useState } from "react";
 
 const primaryNav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/products", label: "Products", icon: Package },
+  { to: "/prawns-intake", label: "Intake", icon: Package },
   { to: "/sales", label: "Sales", icon: ShoppingCart },
   { to: "/customers", label: "Customers", icon: Users },
 ];
 
 const moreNav = [
+  { to: "/freezing-batches", label: "Freezing", icon: Snowflake },
   { to: "/inventory", label: "Inventory", icon: Layers },
   { to: "/expenses", label: "Expenses", icon: Receipt },
   { to: "/warehouses", label: "Warehouses", icon: Warehouse },

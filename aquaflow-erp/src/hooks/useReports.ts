@@ -81,3 +81,28 @@ export const exportCSV = async (type: string, from?: string, to?: string) => {
   link.click();
   link.remove();
 };
+
+export interface ProfitLossData {
+  period: { from: string; to: string };
+  revenue: number;
+  subtotalRevenue: number;
+  gstCollected: number;
+  cogs: number;
+  grossProfit: number;
+  grossMargin: number;
+  operatingExpenses: number;
+  netProfit: number;
+  netMargin: number;
+}
+
+export function useProfitLoss(params?: { from?: string; to?: string }) {
+  return useQuery({
+    queryKey: ['reports', 'profit-loss', params],
+    queryFn: async () => {
+      const { data } = await api.get('/reports/profit-loss', { params });
+      return data.data as ProfitLossData;
+    },
+    staleTime: 60000,
+  });
+}
+

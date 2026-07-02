@@ -22,6 +22,7 @@ import {
   useTopProducts,
   useExpenseBreakdown,
   useCustomerOutstanding,
+  useProfitLoss,
   exportCSV,
 } from "@/hooks/useReports";
 import { useFreezingBatches } from "@/hooks/useFreezingBatches";
@@ -39,6 +40,12 @@ export default function Reports() {
   const { data: creditDataRaw, isLoading: isCreditLoading } = useCustomerOutstanding();
   const { data: batchesData, isLoading: isBatchesLoading } = useFreezingBatches({ status: "All" });
   const batches = batchesData?.data || [];
+
+  // From/To for P&L (year-to-date)
+  const now = new Date();
+  const fromDate = new Date(now.getFullYear(), 0, 1).toISOString().split("T")[0];
+  const toDate = now.toISOString().split("T")[0];
+  const { data: plData, isLoading: isPLLoading } = useProfitLoss({ from: fromDate, to: toDate });
 
   // Prawns Batches calculations
   const activeBatches = batches.filter((b) => b.status !== "exhausted");
@@ -461,6 +468,39 @@ export default function Reports() {
                     />
                   </div>
                 </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Profit & Loss Statement */}
+      <div className="bg-surface rounded-xl border border-border shadow-card p-5 mb-6 mt-4">
+        <div className="flex items-center justify-between mb-4">
+          <p className="font-display font-semibold text-foreground">Profit &amp; Loss — Year to Date</p>
+          <span className="text-xs text-muted-foreground bg-secondary rounded-lg px-2.5 py-1">{fromDate} → {toDate}</span>
+        </div>
+        {isPLLoading ? (
+          <div className="h-24 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full border-4 border-brand/20 border-t-brand animate-spin" />
+          </div>
+        ) : !plData ? (
+          <div className="h-20 flex items-center justify-center text-sm text-muted-foreground">No P&amp;L data available yet.</div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {[
+              { label: "Revenue", value: plData.revenue, color: "text-brand", note: "incl. GST" },
+              { label: "Cost of Goods", value: plData.cogs, color: "text-foreground", note: "purchase cost" },
+              { label: "Gross Profit", value: plData.grossProfit, color: plData.grossProfit >= 0 ? "text-success" : "text-destructive", note: `${plData.grossMargin}% margin` },
+              { label: "Op. Expenses", value: plData.operatingExpenses, color: "text-warning", note: "approved only" },
+              { label: "Net Profit", value: plData.netProfit, color: plData.netProfit >= 0 ? "text-success" : "text-destructive", note: `${plData.netMargin}% margin` },
+            ].map((item) => (
+              <div key={item.label} className="bg-background rounded-xl border border-border p-4">
+                <p className="text-[10px] font-display font-semibold uppercase tracking-wide text-muted-foreground mb-0.5">{item.label}</p>
+                <p className={`font-display font-bold text-xl ${item.color}`}>
+                  {item.value < 0 ? "−" : ""}₹{Math.abs(item.value || 0).toLocaleString("en-IN")}
+                </p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">{item.note}</p>
               </div>
             ))}
           </div>
